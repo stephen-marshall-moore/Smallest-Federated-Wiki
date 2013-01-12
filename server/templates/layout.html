@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{.Title}}</title>
+  </head>
+  <body>
+    <a href="/"><h1>{{.Title}}</h1></a>
+    {{range .Story}}
+      <div class='item {{.Type}}' data-id ='{{.Id}}'>
+        <p>{{.Text}}</p>
+      </div>
+    {{end}}
+    {{range .Journal}}
+      <a class='action {{.Type}}' data-id ='{{.Id}}'>
+        {{.Type}}
+      </a>
+    {{end}}
+  </body>
+</html>
