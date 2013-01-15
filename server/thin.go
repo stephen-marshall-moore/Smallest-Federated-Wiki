@@ -93,9 +93,19 @@ func MapHandler ( w http.ResponseWriter, r *http.Request ) {
   if err != nil {
     log.Fatal(err)
   }
+  
+  var item * MapItem
 
   for _, value := range slugs {
-    log.Println( value.Name() )
+    if value.IsDir() != true {
+      item = new(MapItem)
+      item.Slug = value.Name()
+      item.Date = value.ModTime().Unix()
+      item.Title = value.Name()
+      item.Synopsis = "synopsis"
+
+      log.Println( item )
+    }
   }
 }
 

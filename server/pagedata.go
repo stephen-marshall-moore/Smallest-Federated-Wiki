@@ -24,3 +24,10 @@ type Page struct {
   Journal [] *Entry `json:"journal"`
 }
 
+type MapItem struct {
+  Slug string `json:"slug"`
+  Title string `json:"title"`
+  Date int64 `json:"date"`
+  Synopsis string `json:"synopsis"`
+}
+
