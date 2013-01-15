@@ -85,28 +85,40 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
 }
 
 func MapHandler ( w http.ResponseWriter, r *http.Request ) {
+  w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
-  //vars := mux.Vars(r)
+  dirnamesmap := map[string] string { "sitemap" : "server/data", "factories" : "client/images" }
+  vars := mux.Vars(r)
+  dirname := "/home/stephen/hacking/fedwiki/" + dirnamesmap[vars["map"]]
 
-  slugs, err := ioutil.ReadDir("/home/stephen/hacking/fedwiki/server/data")
+  log.Println( dirname )
+
+  slugs, err := ioutil.ReadDir(dirname)
 
   if err != nil {
     log.Fatal(err)
   }
   
-  var item * MapItem
+  //items := make(map[string] *MapItem)
+  items := [] *MapItem {}
 
   for _, value := range slugs {
     if value.IsDir() != true {
-      item = new(MapItem)
+      item := new( MapItem )
       item.Slug = value.Name()
       item.Date = value.ModTime().Unix()
       item.Title = value.Name()
       item.Synopsis = "synopsis"
 
-      log.Println( item )
+      //items[item.Slug] = item
+      items = append(items, item)
+
+      //log.Println( items[item.Slug] )
     }
   }
+
+  enc := json.NewEncoder(w)
+  enc.Encode(items)
 }
 
 func main() {
