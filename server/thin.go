@@ -3,13 +3,34 @@ package main
 import (
   //"fmt"
   "encoding/json"
-  "io/ioutil"
+  //"io/ioutil"
   "log"
   "net/http"
   "os"
+  "path"
+  "path/filepath"
+  //"strings"
   "text/template"
   "github.com/gorilla/mux"
 )
+
+func Synopsis ( page Page ) string {
+  text := ""
+
+  if len( page.Story[:2] ) > 0 {
+    for _, p := range page.Story[:2] {
+      if p.Type == "paragraph" {
+        text += p.Text
+      }
+    }
+  }
+  
+  if len(text) > 0 {
+    return text
+  }
+
+  return "A story that does not start with text." 
+}
 
 func StaticHandler ( w http.ResponseWriter, r *http.Request ) {
   vars := mux.Vars(r)
@@ -84,16 +105,21 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
 
 }
 
-func MapHandler ( w http.ResponseWriter, r *http.Request ) {
+func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
+  appRoot := "/home/stephen/hacking/fedwiki"
+
   w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
-  dirnamesmap := map[string] string { "sitemap" : "server/data", "factories" : "client/images" }
-  vars := mux.Vars(r)
-  dirname := "/home/stephen/hacking/fedwiki/" + dirnamesmap[vars["map"]]
+  //dirnamesmap := map[string] string { "sitemap" : "server/data", "factories" : "client/images" }
+  //vars := mux.Vars(r)
+  //dirname := "/home/stephen/hacking/fedwiki/" + dirnamesmap[vars["map"]]
 
-  log.Println( dirname )
+  //log.Println( dirname )
 
-  slugs, err := ioutil.ReadDir(dirname)
+  //slugs, err := ioutil.ReadDir(dirname)
+
+  pattern := appRoot + "/server/data/*"
+  slugs, err := filepath.Glob(pattern)
 
   if err != nil {
     log.Fatal(err)
@@ -103,18 +129,81 @@ func MapHandler ( w http.ResponseWriter, r *http.Request ) {
   items := [] *MapItem {}
 
   for _, value := range slugs {
-    if value.IsDir() != true {
+    //if value.IsDir() != true {
       item := new( MapItem )
-      item.Slug = value.Name()
-      item.Date = value.ModTime().Unix()
-      item.Title = value.Name()
-      item.Synopsis = "synopsis"
 
-      //items[item.Slug] = item
+      info := new( Page )
+
+      file, err := os.Open(value)
+      if err != nil {
+        log.Fatal(err)
+      }
+
+      fi, err2 := os.Stat(value)
+      if err2 != nil {
+        log.Fatal(err2)
+      }
+
+      enc := json.NewDecoder(file)
+      enc.Decode(info)
+
+      item.Slug = path.Base(value)
+      item.Date = fi.ModTime().Unix()
+      item.Title = info.Title
+      item.Synopsis = Synopsis(*info)
+
       items = append(items, item)
 
       //log.Println( items[item.Slug] )
-    }
+    //}
+  }
+
+  enc := json.NewEncoder(w)
+  enc.Encode(items)
+}
+
+func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
+  appRoot := "/home/stephen/hacking/fedwiki"
+
+  w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
+
+  //dirnamesmap := map[string] string { "sitemap" : "server/data", "factories" : "client/images" }
+  //vars := mux.Vars(r)
+  //dirname := "/home/stephen/hacking/fedwiki/" + dirnamesmap[vars["map"]]
+
+  //log.Println( dirname )
+
+  //slugs, err := ioutil.ReadDir(dirname)
+
+  pattern := appRoot + "/client/plugins/*/factory.json"
+  slugs, err := filepath.Glob(pattern)
+
+  if err != nil {
+    log.Fatal(err)
+  }
+  
+  //items := make(map[string] *MapItem)
+  items := [] *FactoryInfo {}
+
+  for _, value := range slugs {
+    //if value.IsDir() != true {
+      //item := new( MapItem )
+
+      info := new(FactoryInfo)
+
+      file, err := os.Open(value)
+      if err != nil {
+        log.Fatal(err)
+      }
+
+      enc := json.NewDecoder(file)
+      enc.Decode(info)
+
+      //items[item.Slug] = item
+      items = append(items, info)
+
+      //log.Println( items[item.Slug] )
+    //}
   }
 
   enc := json.NewEncoder(w)
@@ -132,7 +221,8 @@ func main() {
     r.HandleFunc("/plugins/{fn:[A-Za-z0-9_.-]+.(coffee|js|json)}", PluginHandler)
     r.HandleFunc("/plugins/{sub}/{fn:[A-Za-z0-9_.-]+.(coffee|js|json)}", PluginSubHandler)
 
-    r.HandleFunc("/system/{map:(sitemap|factories)}.json", MapHandler)
+    r.HandleFunc("/system/sitemap.json", SiteMapHandler)
+    r.HandleFunc("/system/factories.json", FactoriesHandler)
 
     http.Handle("/", r)
     http.ListenAndServe(":8080", nil)

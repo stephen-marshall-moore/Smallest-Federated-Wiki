@@ -31,3 +31,9 @@ type MapItem struct {
   Synopsis string `json:"synopsis"`
 }
 
+type FactoryInfo struct {
+  Name string `json:"name"`
+  Title string `json:"title"`
+  Category string `json:"category"`
+}
+
