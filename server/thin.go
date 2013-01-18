@@ -12,6 +12,7 @@ import (
   "path/filepath"
   "regexp"
   "strconv"
+  "strings"
   "text/template"
   "github.com/gorilla/mux"
 )
@@ -220,13 +221,13 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
 }
 
 func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
-  pat := regexp.MustCompile( "(/(?P<site>[a-zA-Z0-9:.-]+)/(?P<slug>[a-z0-9-]+(_rev[0-9]+)?))+" )
+  pat := regexp.MustCompile( "(/[a-zA-Z0-9:.-]+/[a-z0-9-]+(_rev[0-9]+)?)+" )
 
-  matches := pat.FindStringSubmatch( req.URL.String() )
+  flag := pat.MatchString( req.URL.String() ) 
 
-  if len(matches) > 0 {
+  if flag {
     m.Vars = make(map[string]string)
-    for i, match := range matches {
+    for i, match := range strings.Split(req.URL.String(), "/") {
       m.Vars[strconv.Itoa(i)] = match
     }
     return true
