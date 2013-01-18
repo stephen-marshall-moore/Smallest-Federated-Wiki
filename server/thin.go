@@ -6,10 +6,12 @@ import (
   //"io/ioutil"
   "log"
   "net/http"
+  //"net/url"
   "os"
   "path"
   "path/filepath"
-  //"strings"
+  "regexp"
+  "strconv"
   "text/template"
   "github.com/gorilla/mux"
 )
@@ -103,6 +105,13 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
   err = tmpl.Execute(w, page)
   if err != nil { panic(err) }
 
+}
+
+func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
+  //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
+  vars := mux.Vars(r)
+
+  log.Println(vars)
 }
 
 func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
@@ -210,19 +219,40 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
   enc.Encode(items)
 }
 
+func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
+  pat := regexp.MustCompile( "(/(?P<site>[a-zA-Z0-9:.-]+)/(?P<slug>[a-z0-9-]+(_rev[0-9]+)?))+" )
+
+  matches := pat.FindStringSubmatch( req.URL.String() )
+
+  if len(matches) > 0 {
+    m.Vars = make(map[string]string)
+    for i, match := range matches {
+      m.Vars[strconv.Itoa(i)] = match
+    }
+    return true
+  }
+
+  return false
+}
+
 func main() {
     r := mux.NewRouter()
 
     r.HandleFunc("/{slug:[a-z0-9-]+}.json", JsonHandler)
-    r.HandleFunc("/view/{id:[a-z0-9-]+}", ViewHandler)
+    //r.HandleFunc("/view/{id:[a-z0-9-]+}", ViewHandler)
     r.HandleFunc("/{fn:[A-Za-z0-9-]+.(css|js|png)}", StaticHandler)
     r.HandleFunc("/js/{fn:[A-Za-z0-9-.]+.(css|js)}", JsHandler)
     r.HandleFunc("/js/{sub}/{fn:[A-Za-z0-9_.-]+.(css|js|png)}", JsSubHandler)
     r.HandleFunc("/plugins/{fn:[A-Za-z0-9_.-]+.(coffee|js|json)}", PluginHandler)
     r.HandleFunc("/plugins/{sub}/{fn:[A-Za-z0-9_.-]+.(coffee|js|json)}", PluginSubHandler)
+    //r.HandleFunc("/{multi:((/?[a-zA-Z0-9:.-]+/[a-z0-9-]+(_rev[0-9]+)?)+)}", MultiViewHandler)
+    //r.HandleFunc("/{site:[a-zA-Z0-9:.-]+}/{slug:[a-z0-9-]+(_rev[0-9]+)?}", MultiViewHandler)
 
     r.HandleFunc("/system/sitemap.json", SiteMapHandler)
     r.HandleFunc("/system/factories.json", FactoriesHandler)
+
+    route := r.MatcherFunc(MatchMultiples)
+    route.HandlerFunc(MultiViewHandler)
 
     http.Handle("/", r)
     http.ListenAndServe(":8080", nil)
