@@ -37,3 +37,8 @@ type FactoryInfo struct {
   Category string `json:"category"`
 }
 
+type ViewInfo struct {
+  Status string
+  Slug string
+}
+

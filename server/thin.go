@@ -108,11 +108,46 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
 
 }
 
+
+
 func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
   //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
   vars := mux.Vars(r)
 
-  log.Println(vars)
+  log.Println( vars )
+
+  limit, converr := strconv.Atoi(vars["count"])
+  if converr != nil { panic(converr) }
+
+  data := make([]*ViewInfo, limit)
+
+  for i := 0; i < limit; i++ {
+    datum := new(ViewInfo)
+    if i == 0 {
+      datum.Status = "active"
+    }
+    datum.Slug = vars["slug_" + strconv.Itoa(i)]
+ 
+    data[i] = datum
+  } 
+    
+  tmpl, err := template.ParseFiles("/home/stephen/hacking/fedwiki/server/templates/layout.html")
+  
+  if err != nil { panic(err) }
+  /***
+  data := struct {
+    Title string
+    Status string
+    Slug string
+  } { vars["slug_0"], "active", vars["slug_0"] }
+  ***/
+  stuff := struct {
+    Title string
+    Slugs [] * ViewInfo
+  } { "my title", data }
+
+  err = tmpl.Execute(w, stuff)
+  if err != nil { panic(err) }
 }
 
 func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
@@ -227,8 +262,13 @@ func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
 
   if flag {
     m.Vars = make(map[string]string)
-    for i, match := range strings.Split(req.URL.String(), "/") {
-      m.Vars[strconv.Itoa(i)] = match
+    for i, match := range strings.Split(req.URL.String()[1:], "/") {
+      if i % 2 == 0 {
+        m.Vars["site_" + strconv.Itoa(i/2)] = match
+        m.Vars["count"] = strconv.Itoa((i/2) + 1 )
+      } else {
+        m.Vars["slug_" + strconv.Itoa(i/2)] = match
+      }
     }
     return true
   }

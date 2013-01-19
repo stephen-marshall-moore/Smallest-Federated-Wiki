@@ -21,8 +21,10 @@
   </head>
   <body>
     <section class="main">
-    <div class="page active" id='welcome-visitors'>
+    {{range .Slugs}}
+    <div class="page {{.Status}}" id="{{.Slug}}">
     </div>
+    {{end}}
     </section>
   </body>
 </html>
