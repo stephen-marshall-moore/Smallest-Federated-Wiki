@@ -255,6 +255,37 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
   enc.Encode(items)
 }
 
+
+func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
+  vars := mux.Vars( r )
+
+  log.Println( "action" + ": " + vars["slug"] )
+  //log.Println( r )
+
+  err := r.ParseForm()
+
+  if err != nil {
+    log.Panic(err)
+  }
+
+  vals := r.Form
+
+  jsaction := vals["action"]
+
+  log.Println( jsaction )
+
+  var entry Entry
+
+  dec := json.NewDecoder(strings.NewReader( jsaction[0] ))
+
+  err = dec.Decode(&entry)
+  if err != nil {
+    log.Panic(err)
+  }
+
+  log.Println( entry.Type + ", " + entry.Item.Text )
+}
+
 func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
   pat := regexp.MustCompile( "(/[a-zA-Z0-9:.-]+/[a-z0-9-]+(_rev[0-9]+)?)+" )
 
@@ -263,6 +294,11 @@ func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
   if flag {
     m.Vars = make(map[string]string)
     for i, match := range strings.Split(req.URL.String()[1:], "/") {
+      if match == "page" {
+        log.Println( "page in match multiples" )
+        return false
+      }
+
       if i % 2 == 0 {
         m.Vars["site_" + strconv.Itoa(i/2)] = match
         m.Vars["count"] = strconv.Itoa((i/2) + 1 )
@@ -291,6 +327,9 @@ func main() {
 
     r.HandleFunc("/system/sitemap.json", SiteMapHandler)
     r.HandleFunc("/system/factories.json", FactoriesHandler)
+
+    route7 := r.HandleFunc("/page/{slug:[a-z0-9-]+}/action",ActionHandler)
+    route7.Methods("PUT", "GET")
 
     route := r.MatcherFunc(MatchMultiples)
     route.HandlerFunc(MultiViewHandler)
