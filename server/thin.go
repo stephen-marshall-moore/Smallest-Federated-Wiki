@@ -35,6 +35,56 @@ func Synopsis ( page Page ) string {
   return "A story that does not start with text." 
 }
 
+func (p * Page) Read( slug string ) {
+
+  file, err := os.Open("/home/stephen/hacking/fedwiki/server/data/" + slug) // For read access.
+  defer file.Close()
+
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  enc := json.NewDecoder(file)
+  enc.Decode(p)
+}
+
+func (p * Page) Write( slug string ) {
+  fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
+  
+  err2 := os.Rename(fn, fn + ".bak")
+  if err2 != nil {
+    log.Fatal(err2)
+  }
+
+  file, err := os.Create(fn)
+  defer file.Close()
+
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  enc := json.NewEncoder(file)
+  enc.Encode(p)
+}
+
+func (p * Page) AddItem ( e * Entry ) {
+  item := e.Item
+
+  var m int
+
+  for i, x := range p.Story {
+    if x.Id == item.Id {
+      m = i
+      break
+    }
+  }
+  
+  story := append( p.Story[:m-1], item )
+  story = append(story, p.Story[m+1:]...)
+  p.Story = story
+  p.Journal = append( p.Journal, e )
+}
+
 func StaticHandler ( w http.ResponseWriter, r *http.Request ) {
   vars := mux.Vars(r)
   fname := "/home/stephen/hacking/fedwiki/client/" + vars["fn"]
@@ -93,6 +143,8 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
   var page Page
 
   file, err := os.Open("/home/stephen/hacking/fedwiki/server/data/" + id) // For read access.
+  defer file.Close()
+
   if err != nil {
     log.Fatal(err)
   }
@@ -261,7 +313,10 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
 
   log.Println( "action" + ": " + vars["slug"] )
   //log.Println( r )
+  
+  page := new(Page)
 
+  page.Read( vars["slug"] )
   err := r.ParseForm()
 
   if err != nil {
@@ -284,6 +339,11 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
   }
 
   log.Println( entry.Type + ", " + entry.Item.Text )
+
+  page.AddItem( &entry )
+  page.Write( vars["slug"] )
+
+  log.Println( page )
 }
 
 func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
