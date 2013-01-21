@@ -48,6 +48,20 @@ func (p * Page) Read( slug string ) {
   enc.Decode(p)
 }
 
+func (p * Page) Create( slug string ) {
+  fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
+
+  file, err := os.Create(fn)
+  defer file.Close()
+
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  enc := json.NewEncoder(file)
+  enc.Encode(p)
+}
+
 func (p * Page) Write( slug string ) {
   fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
   
@@ -68,6 +82,11 @@ func (p * Page) Write( slug string ) {
 }
 
 func (p * Page) AddItem ( e * Entry ) {
+  p.Story = append( p.Story, e.Item )
+  p.Journal = append( p.Journal, e )
+}
+
+func (p * Page) ReplaceItem ( e * Entry ) {
   item := e.Item
 
   var m int
@@ -313,10 +332,7 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
 
   log.Println( "action" + ": " + vars["slug"] )
   //log.Println( r )
-  
-  page := new(Page)
 
-  page.Read( vars["slug"] )
   err := r.ParseForm()
 
   if err != nil {
@@ -339,9 +355,24 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
   }
 
   log.Println( entry.Type + ", " + entry.Item.Text )
+  
+  page := new(Page)
 
-  page.AddItem( &entry )
-  page.Write( vars["slug"] )
+  switch entry.Type {
+    case "add": {
+      page.Read( vars["slug"] )
+      page.AddItem( &entry )
+      page.Write( vars["slug"] ) 
+    }
+    case "edit": {
+      page.Read( vars["slug"] )
+      page.ReplaceItem( &entry )
+      page.Write( vars["slug"] )
+    }
+    case "create": {
+      page.Create( vars["slug"] )
+    }
+  }
 
   log.Println( page )
 }
