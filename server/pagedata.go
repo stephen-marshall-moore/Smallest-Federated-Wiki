@@ -17,6 +17,7 @@ type Entry struct {
   After string `json:"after"`
   Item *Item `json:"item,omitempty"`
   Site *string `json:"site,omitempty"`
+  Order [] *string `json:"order,omitempty"`
 }
 
 type Page struct {

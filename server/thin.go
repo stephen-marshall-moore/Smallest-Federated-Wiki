@@ -82,7 +82,20 @@ func (p * Page) Write( slug string ) {
 }
 
 func (p * Page) AddItem ( e * Entry ) {
-  p.Story = append( p.Story, e.Item )
+  if e.After != "" {
+    story := [] * Item {}
+
+    for _, x := range p.Story {
+      story = append( story, x )
+      if x.Id == e.After {
+        story = append( story, e.Item )
+      }
+    }
+
+    p.Story = story
+  } else {
+    p.Story = append( p.Story, e.Item )
+  }
   p.Journal = append( p.Journal, e )
 }
 
@@ -108,6 +121,25 @@ func (p * Page) ReplaceItem ( e * Entry ) {
 
   if m > len( p.Story ) {
     story = append(story, p.Story[m+1:]...)
+  }
+
+  p.Story = story
+  p.Journal = append( p.Journal, e )
+}
+
+func (p * Page) Reorder ( e * Entry ) {
+  paragraphs := make( map[string] * Item )
+
+  
+
+  for _, x := range p.Story {
+    paragraphs[x.Id] = x 
+  }
+  
+  story := [] * Item {}
+
+  for _, x := range e.Order {
+    story = append( story, paragraphs[*x] )
   }
 
   p.Story = story
@@ -364,7 +396,10 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
     log.Panic(err)
   }
 
-  log.Println( entry.Type + ", " + entry.Item.Text )
+  log.Println( entry.Type )
+  if entry.Item != nil {
+    log.Println( "> " + entry.Item.Text )
+  }
   
   page := new(Page)
 
@@ -385,6 +420,11 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
       }
       page.AddItem( &entry )
       page.Create( vars["slug"] )
+    }
+    case "move": {
+      page.Read( vars["slug"] )
+      page.Reorder( &entry )
+      page.Write( vars["slug"] )
     }
   }
 
