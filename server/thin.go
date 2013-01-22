@@ -20,7 +20,7 @@ import (
 func Synopsis ( page Page ) string {
   text := ""
 
-  if len( page.Story[:2] ) > 0 {
+  if len( page.Story ) > 3 {
     for _, p := range page.Story[:2] {
       if p.Type == "paragraph" {
         text += p.Text
@@ -65,7 +65,7 @@ func (p * Page) Create( slug string ) {
 func (p * Page) Write( slug string ) {
   fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
   
-  err2 := os.Rename(fn, fn + ".bak")
+  err2 := os.Rename(fn, fn + "_" + strconv.Itoa( len( p.Journal ) ))
   if err2 != nil {
     log.Fatal(err2)
   }
@@ -98,8 +98,18 @@ func (p * Page) ReplaceItem ( e * Entry ) {
     }
   }
   
-  story := append( p.Story[:m-1], item )
-  story = append(story, p.Story[m+1:]...)
+  story := [] * Item {}
+
+  if m < 1 {
+    story = append( story, item )
+  } else {
+    story = append( p.Story[:m-1], item )
+  }
+
+  if m > len( p.Story ) {
+    story = append(story, p.Story[m+1:]...)
+  }
+
   p.Story = story
   p.Journal = append( p.Journal, e )
 }
@@ -370,6 +380,10 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
       page.Write( vars["slug"] )
     }
     case "create": {
+      if entry.Item != nil {
+        page.Title = entry.Item.Title
+      }
+      page.AddItem( &entry )
       page.Create( vars["slug"] )
     }
   }

@@ -4,9 +4,10 @@ import (
 )
 
 type Item struct {
-  Type string `json:"type"`
-  Id string `json:"id"`
-  Text string `json:"text"`
+  Type string `json:"type,omitempty"`
+  Id string `json:"id,omitempty"`
+  Text string `json:"text,omitempty"`
+  Title string `json:"title,omitempty"`
 }
 
 type Entry struct {
