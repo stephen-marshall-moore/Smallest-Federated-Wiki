@@ -83,7 +83,7 @@ func (p * Page) Write( slug string ) {
 
 func (p * Page) AddItem ( e * Entry ) {
   if e.After != "" {
-    story := [] * Item {}
+    var story [] * Item
 
     for _, x := range p.Story {
       story = append( story, x )
@@ -99,28 +99,19 @@ func (p * Page) AddItem ( e * Entry ) {
   p.Journal = append( p.Journal, e )
 }
 
-func (p * Page) ReplaceItem ( e * Entry ) {
-  item := e.Item
+func (p * Page) AddEntry ( e * Entry ) {
+  p.Journal = append( p.Journal, e )
+}
 
-  var m int
+func (p * Page) ReplaceItem ( e * Entry ) {  
+  var story [] * Item
 
-  for i, x := range p.Story {
-    if x.Id == item.Id {
-      m = i
-      break
+  for _, x := range p.Story {
+    if x.Id == e.Id {
+      story = append( story, e.Item )
+    } else {
+      story = append( story, x )
     }
-  }
-  
-  story := [] * Item {}
-
-  if m < 1 {
-    story = append( story, item )
-  } else {
-    story = append( p.Story[:m-1], item )
-  }
-
-  if m > len( p.Story ) {
-    story = append(story, p.Story[m+1:]...)
   }
 
   p.Story = story
@@ -418,7 +409,7 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
       if entry.Item != nil {
         page.Title = entry.Item.Title
       }
-      page.AddItem( &entry )
+      page.AddEntry( &entry )
       page.Create( vars["slug"] )
     }
     case "move": {

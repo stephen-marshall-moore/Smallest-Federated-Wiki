@@ -11,19 +11,19 @@ type Item struct {
 }
 
 type Entry struct {
-  Type string `json:"type"`
-  Id string `json:"id"`
-  Date int64 `json:"date"`
-  After string `json:"after"`
+  Type string `json:"type,omitempty"`
+  Id string `json:"id,omitempty"`
+  Date int64 `json:"date,omitempty"`
+  After string `json:"after,omitempty"`
   Item *Item `json:"item,omitempty"`
   Site *string `json:"site,omitempty"`
   Order [] *string `json:"order,omitempty"`
 }
 
 type Page struct {
-  Title string `json:"title"`
-  Story [] *Item `json:"story"`
-  Journal [] *Entry `json:"journal"`
+  Title string `json:"title,omitempty"`
+  Story [] *Item `json:"story,omitempty"`
+  Journal [] *Entry `json:"journal,omitempty"`
 }
 
 type MapItem struct {
