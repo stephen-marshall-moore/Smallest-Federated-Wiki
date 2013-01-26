@@ -15,7 +15,18 @@ import (
   "strings"
   "text/template"
   "github.com/gorilla/mux"
+  "openid"
 )
+
+const dataDir = "/home/stephen/hacking/fedwiki/server/templates"
+
+// For the demo, we use in-memory infinite storage nonce and discovery
+// cache. In your app, do not use this as it will eat up memory and never
+// free it. Use your own implementation, on a better database system.
+// If you have multiple servers for example, you may need to share at least
+// the nonceStore between them.
+var nonceStore = &openid.SimpleNonceStore{Store: make(map[string][]*openid.Nonce)}
+var discoveryCache = &openid.SimpleDiscoveryCache{}
 
 func Synopsis ( page Page ) string {
   text := ""
@@ -186,6 +197,44 @@ func JsonHandler ( w http.ResponseWriter, r *http.Request ) {
 
   http.ServeFile(w,r,slug)
 }
+
+func LoginHandler ( w http.ResponseWriter, r *http.Request ) {
+  log.Println( "LoginHandler: " )
+}
+
+
+func DiscoverHandler(w http.ResponseWriter, r *http.Request) {
+  if url, err := openid.RedirectUrl("https://www.google.com/accounts/o8/id",
+      "http://localhost:8080/openidcallback",
+      ""); err == nil {
+    http.Redirect(w, r, url, 303)
+  } else {
+    log.Print(err)
+  }
+}
+
+func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
+
+  fullUrl := "http://localhost:8080" + r.URL.String()
+  log.Print(fullUrl)
+  id, err := openid.Verify(
+      fullUrl,
+      discoveryCache, nonceStore)
+  if err == nil {
+    p := make(map[string]string)
+    p["user"] = id
+    if t, err := template.ParseFiles(dataDir + "/layout.html"); err == nil {
+      t.Execute(w, p)
+    } else {
+      log.Println("WTF")
+      log.Print(err)
+    }
+  } else {
+    log.Println("WTF2")
+    log.Print(err)
+  }
+}
+
 
 func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
   //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
@@ -450,6 +499,9 @@ func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
 
 func main() {
     r := mux.NewRouter()
+
+    r.HandleFunc("/login", DiscoverHandler)
+    r.HandleFunc("/openidcallback", OpenIdCallbackHandler)
 
     r.HandleFunc("/{slug:[a-z0-9-]+}.json", JsonHandler)
     //r.HandleFunc("/view/{id:[a-z0-9-]+}", ViewHandler)
