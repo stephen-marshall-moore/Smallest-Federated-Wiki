@@ -15,10 +15,14 @@ import (
   "strings"
   "text/template"
   "github.com/gorilla/mux"
-  "openid"
+  "github.com/gorilla/sessions"
+  "github.com/yohcop/openid.go/src/openid"
 )
 
 const dataDir = "/home/stephen/hacking/fedwiki/server/templates"
+
+
+var cookieStore = sessions.NewCookieStore([]byte("not-very-secret"))
 
 // For the demo, we use in-memory infinite storage nonce and discovery
 // cache. In your app, do not use this as it will eat up memory and never
@@ -202,6 +206,18 @@ func LoginHandler ( w http.ResponseWriter, r *http.Request ) {
   log.Println( "LoginHandler: " )
 }
 
+func LogoutHandler ( w http.ResponseWriter, r *http.Request ) {
+  session, _ := cookieStore.Get( r, "wiki-woko" )
+
+  session.Values["authenticated"] = 17
+  id := session.Values["id"]
+ 
+  log.Println( "LogoutHandler: " + id.(string) )
+  session.Save(r,w)
+
+  http.Redirect(w,r, "/view/welcome-visitors", 303)
+}
+
 
 func DiscoverHandler(w http.ResponseWriter, r *http.Request) {
   if url, err := openid.RedirectUrl("https://www.google.com/accounts/o8/id",
@@ -221,10 +237,20 @@ func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
       fullUrl,
       discoveryCache, nonceStore)
   if err == nil {
-    p := make(map[string]string)
-    p["user"] = id
+
+    session, _ := cookieStore.Get( r, "wiki-woko" )
+    session.Values["authenticated"] = 42
+    session.Values["id"] = id
+    session.Save(r,w)
+
+    stuff := struct {
+      Login bool
+      Title string
+      Slugs [] * ViewInfo
+    } { true, "my title", nil }
+
     if t, err := template.ParseFiles(dataDir + "/layout.html"); err == nil {
-      t.Execute(w, p)
+      t.Execute(w, stuff)
     } else {
       log.Println("WTF")
       log.Print(err)
@@ -261,7 +287,11 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
 
 }
 
+func IsAuthenticated ( r * http.Request ) bool {
+  session, _ := cookieStore.Get( r, "wiki-woko" )
 
+  return session.Values["authenticated"] == 42
+}
 
 func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
   //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
@@ -295,9 +325,10 @@ func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
   } { vars["slug_0"], "active", vars["slug_0"] }
   ***/
   stuff := struct {
+    Login bool
     Title string
     Slugs [] * ViewInfo
-  } { "my title", data }
+  } { IsAuthenticated(r), "my title", data }
 
   err = tmpl.Execute(w, stuff)
   if err != nil { panic(err) }
@@ -410,6 +441,12 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
 
 
 func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
+  if !IsAuthenticated(r) {
+    log.Println( "Action Handler: " + http.StatusText(403) )
+    http.Error(w, http.StatusText(403), 403)
+    return
+  }
+
   vars := mux.Vars( r )
 
   log.Println( "action" + ": " + vars["slug"] )
@@ -501,11 +538,13 @@ func main() {
     r := mux.NewRouter()
 
     r.HandleFunc("/login", DiscoverHandler)
+    r.HandleFunc("/logout", LogoutHandler)
     r.HandleFunc("/openidcallback", OpenIdCallbackHandler)
 
     r.HandleFunc("/{slug:[a-z0-9-]+}.json", JsonHandler)
     //r.HandleFunc("/view/{id:[a-z0-9-]+}", ViewHandler)
-    r.HandleFunc("/{fn:[A-Za-z0-9-]+.(css|js|png)}", StaticHandler)
+    //r.HandleFunc("/{fn:[A-Za-z0-9-]+.(css|js|png)}", StaticHandler)
+    r.HandleFunc("/{fn:(images/)?[A-Za-z0-9-]+.(css|js|png)}", StaticHandler)
     r.HandleFunc("/js/{fn:[A-Za-z0-9-.]+.(css|js)}", JsHandler)
     r.HandleFunc("/js/{sub}/{fn:[A-Za-z0-9_.-]+.(css|js|png)}", JsSubHandler)
     r.HandleFunc("/plugins/{fn:[A-Za-z0-9_.-]+.(coffee|js|json)}", PluginHandler)

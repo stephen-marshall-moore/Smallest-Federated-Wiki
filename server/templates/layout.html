@@ -27,12 +27,20 @@
     {{end}}
     </section>
     <footer class="login">
-      <form action="/login" method="POST">
+      {{if .Login}}
+      <form action="/logout" method="POST">
       <span class="provider">
-        <input type="button" title="Google" value="G" data-provider="https://www.google.com/accounts/o8/id">button g</input>
-        <input type="button" title="Yahoo!" value="Y" data-provider="https://me.yahoo.com">button y</input>
+        <input type="button" title="Logout" value="Logout"></input>
       </span>
       </form>
+      {{else}}
+      <form action="/login" method="POST">
+      <span class="provider">
+        <input type="button" title="Google" value="G" data-provider="https://www.google.com/accounts/o8/id"></input>
+        <input type="button" title="Yahoo!" value="Y" data-provider="https://me.yahoo.com"></input>
+      </span>
+      </form>
+      {{end}}
     </footer>
   </body>
 </html>
