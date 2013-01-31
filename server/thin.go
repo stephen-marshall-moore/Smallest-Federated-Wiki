@@ -32,126 +32,6 @@ var cookieStore = sessions.NewCookieStore([]byte("not-very-secret"))
 var nonceStore = &openid.SimpleNonceStore{Store: make(map[string][]*openid.Nonce)}
 var discoveryCache = &openid.SimpleDiscoveryCache{}
 
-func Synopsis ( page Page ) string {
-  text := ""
-
-  if len( page.Story ) > 3 {
-    for _, p := range page.Story[:2] {
-      if p.Type == "paragraph" {
-        text += p.Text
-      }
-    }
-  }
-  
-  if len(text) > 0 {
-    return text
-  }
-
-  return "A story that does not start with text." 
-}
-
-func (p * Page) Read( slug string ) {
-
-  file, err := os.Open("/home/stephen/hacking/fedwiki/server/data/" + slug) // For read access.
-  defer file.Close()
-
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  enc := json.NewDecoder(file)
-  enc.Decode(p)
-}
-
-func (p * Page) Create( slug string ) {
-  fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
-
-  file, err := os.Create(fn)
-  defer file.Close()
-
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  enc := json.NewEncoder(file)
-  enc.Encode(p)
-}
-
-func (p * Page) Write( slug string ) {
-  fn := "/home/stephen/hacking/fedwiki/server/data/" + slug
-  
-  err2 := os.Rename(fn, fn + "_" + strconv.Itoa( len( p.Journal ) ))
-  if err2 != nil {
-    log.Fatal(err2)
-  }
-
-  file, err := os.Create(fn)
-  defer file.Close()
-
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  enc := json.NewEncoder(file)
-  enc.Encode(p)
-}
-
-func (p * Page) AddItem ( e * Entry ) {
-  if e.After != "" {
-    var story [] * Item
-
-    for _, x := range p.Story {
-      story = append( story, x )
-      if x.Id == e.After {
-        story = append( story, e.Item )
-      }
-    }
-
-    p.Story = story
-  } else {
-    p.Story = append( p.Story, e.Item )
-  }
-  p.Journal = append( p.Journal, e )
-}
-
-func (p * Page) AddEntry ( e * Entry ) {
-  p.Journal = append( p.Journal, e )
-}
-
-func (p * Page) ReplaceItem ( e * Entry ) {  
-  var story [] * Item
-
-  for _, x := range p.Story {
-    if x.Id == e.Id {
-      story = append( story, e.Item )
-    } else {
-      story = append( story, x )
-    }
-  }
-
-  p.Story = story
-  p.Journal = append( p.Journal, e )
-}
-
-func (p * Page) Reorder ( e * Entry ) {
-  paragraphs := make( map[string] * Item )
-
-  
-
-  for _, x := range p.Story {
-    paragraphs[x.Id] = x 
-  }
-  
-  story := [] * Item {}
-
-  for _, x := range e.Order {
-    story = append( story, paragraphs[*x] )
-  }
-
-  p.Story = story
-  p.Journal = append( p.Journal, e )
-}
-
 func StaticHandler ( w http.ResponseWriter, r *http.Request ) {
   vars := mux.Vars(r)
   fname := "/home/stephen/hacking/fedwiki/client/" + vars["fn"]
@@ -362,6 +242,7 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
       item := new( MapItem )
 
       info := new( Page )
+      info.Body = new( Content )
 
       file, err := os.Open(value)
       if err != nil {
@@ -374,12 +255,12 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
       }
 
       enc := json.NewDecoder(file)
-      enc.Decode(info)
+      enc.Decode(info.Body)
 
       item.Slug = path.Base(value)
       item.Date = fi.ModTime().Unix()
-      item.Title = info.Title
-      item.Synopsis = Synopsis(*info)
+      item.Title = info.Body.Title
+      item.Synopsis = info.Synopsis()
 
       items = append(items, item)
 
@@ -493,7 +374,8 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
     }
     case "create": {
       if entry.Item != nil {
-        page.Title = entry.Item.Title
+        page.Body = new( Content )
+        page.Body.Title = entry.Item.Title
       }
       page.AddEntry( &entry )
       page.Create( vars["slug"] )

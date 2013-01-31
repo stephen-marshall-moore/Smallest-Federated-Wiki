@@ -3,6 +3,19 @@ package main
 import (
 )
 
+
+//Store is an interface for Data access, gets/puts json data.
+type Store interface {
+  Exists( path string ) bool
+  Get( path string ) * Content
+  Put( path string, content * Content )
+}
+
+type FileStore struct {
+  Directory string
+  DefaultDirectory string
+}
+
 type Item struct {
   Type string `json:"type,omitempty"`
   Id string `json:"id,omitempty"`
@@ -21,6 +34,13 @@ type Entry struct {
 }
 
 type Page struct {
+  Directory string
+  Default_Directory string
+  Plugins_Directory string
+  Body * Content
+}
+
+type Content struct {
   Title string `json:"title,omitempty"`
   Story [] *Item `json:"story,omitempty"`
   Journal [] *Entry `json:"journal,omitempty"`
