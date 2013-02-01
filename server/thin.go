@@ -19,8 +19,18 @@ import (
   "github.com/yohcop/openid.go/src/openid"
 )
 
-const dataDir = "/home/stephen/hacking/fedwiki/server/templates"
+var rootDefault = "/home/stephen/hacking/fedwiki/default-data"
 
+var baseStore = FileStore {
+  Directory: "/home/stephen/hacking/fedwiki/data/farm/wiki.nimbostrati.com",
+  DefaultDirectory: rootDefault }
+
+var base = Site {
+  Domain: "wiki.nimbostrati.com",
+  Data: baseStore,
+  ClientDirectory: "/home/stephen/hacking/fedwiki/client" }
+
+var sites = map[string] *Site { base.Domain : &base }
 
 var cookieStore = sessions.NewCookieStore([]byte("not-very-secret"))
 
@@ -32,54 +42,102 @@ var cookieStore = sessions.NewCookieStore([]byte("not-very-secret"))
 var nonceStore = &openid.SimpleNonceStore{Store: make(map[string][]*openid.Nonce)}
 var discoveryCache = &openid.SimpleDiscoveryCache{}
 
+func RequestedSite ( r * http.Request ) * Site {
+  domain := strings.ToLower( strings.Split( r.Host, ":" )[0] )
+  log.Println( "Requested Site: " + domain )
+  return sites[ domain ]
+}
+
 func StaticHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  fname := "/home/stephen/hacking/fedwiki/client/" + vars["fn"]
-  log.Println( "StaticHandler: " + fname )
+  var fname string
+
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.ClientDirectory, vars["fn"] )
+    log.Println( "StaticHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
 
   http.ServeFile(w,r,fname)
 }
 
 func JsHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  fname := "/home/stephen/hacking/fedwiki/client/js/" + vars["fn"]
-  log.Println( "JsHandler: " + fname )
+  var fname string
+
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.ClientDirectory, "js", vars["fn"] )
+    log.Println( "JsHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
 
   http.ServeFile(w,r,fname)
 }
 
 func JsSubHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  fname := "/home/stephen/hacking/fedwiki/client/js/" + vars["sub"] + "/" + vars["fn"]
-  log.Println( "JsSubHandler: " + fname )
+  var fname string
+
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.ClientDirectory, "js", vars["sub"], vars["fn"] )
+    log.Println( "JsSubHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
 
   http.ServeFile(w,r,fname)
 }
 
 
 func PluginHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  fname := "/home/stephen/hacking/fedwiki/client/plugins/" + vars["fn"]
-  log.Println( "PluginHandler: " + fname )
+  var fname string
+
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.ClientDirectory, "plugins", vars["fn"] )
+    log.Println( "PluginHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
 
   http.ServeFile(w,r,fname)
 }
 
 func PluginSubHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  fname := "/home/stephen/hacking/fedwiki/client/plugins/" + vars["sub"] + "/" + vars["fn"]
-  log.Println( "PluginSubHandler: " + fname )
+  var fname string
+
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.ClientDirectory, "plugins", vars["sub"], vars["fn"] )
+    log.Println( "PluginSubHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
 
   http.ServeFile(w,r,fname)
 }
 
 
 func JsonHandler ( w http.ResponseWriter, r *http.Request ) {
-  vars := mux.Vars(r)
-  slug := "/home/stephen/hacking/fedwiki/server/data/" + vars["slug"]
-  log.Println( "JsonHandler: " + slug )
+  var fname string
 
-  http.ServeFile(w,r,slug)
+  site := RequestedSite( r )
+  if site != nil {
+    vars := mux.Vars(r)
+    fname = path.Join( site.Data.Location(), "pages", vars["slug"] )
+    log.Println( "JsonHandler: " + fname )
+  } else {
+    fname = path.Join( rootDefault, "oops.html" )
+  }
+
+  http.ServeFile(w,r,fname)
 }
 
 func LoginHandler ( w http.ResponseWriter, r *http.Request ) {
@@ -100,18 +158,31 @@ func LogoutHandler ( w http.ResponseWriter, r *http.Request ) {
 
 
 func DiscoverHandler(w http.ResponseWriter, r *http.Request) {
-  if url, err := openid.RedirectUrl("https://www.google.com/accounts/o8/id",
-      "http://localhost:8080/openidcallback",
+  site := RequestedSite( r )
+
+  if site != nil {
+
+    if url, err := openid.RedirectUrl("https://www.google.com/accounts/o8/id",
+      "http://" + r.Host + "/openidcallback",
       ""); err == nil {
-    http.Redirect(w, r, url, 303)
+      http.Redirect(w, r, url, 303)
+    } else {
+      log.Print(err)
+    }
   } else {
-    log.Print(err)
-  }
+    http.ServeFile(w,r,path.Join( rootDefault, "oops.html" ))
+  } 
 }
 
 func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
+  site := RequestedSite( r )
 
-  fullUrl := "http://localhost:8080" + r.URL.String()
+  if site == nil {
+    http.ServeFile(w,r,path.Join( rootDefault, "oops.html" ))
+    return
+  } 
+
+  fullUrl := "http://" + r.Host + r.URL.String()
   log.Print(fullUrl)
   id, err := openid.Verify(
       fullUrl,
@@ -123,18 +194,22 @@ func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
     session.Values["id"] = id
     session.Save(r,w)
 
+    http.Redirect(w, r, "/view/welcome-visitors", 302)
+
+    /*
     stuff := struct {
       Login bool
       Title string
       Slugs [] * ViewInfo
     } { true, "my title", nil }
 
-    if t, err := template.ParseFiles(dataDir + "/layout.html"); err == nil {
+    if t, err := template.ParseFiles(path.Join( site.ClientDirectory, "templates", "layout.html")); err == nil {
       t.Execute(w, stuff)
     } else {
       log.Println("WTF")
       log.Print(err)
     }
+    */
   } else {
     log.Println("WTF2")
     log.Print(err)

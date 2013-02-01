@@ -3,9 +3,15 @@ package main
 import (
 )
 
+type Site struct {
+  Domain string
+  Data Store
+  ClientDirectory string
+}
 
 //Store is an interface for Data access, gets/puts json data.
 type Store interface {
+  Location() string
   Exists( path string ) bool
   Get( path string ) * Content
   Put( path string, content * Content )

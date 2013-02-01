@@ -8,11 +8,15 @@ import (
   "strconv"
 )
 
-func (fs FileStore) Exists( path string ) bool {
-  fi, err := os.Stat(path.Join( fs.Directory,  path))
+func (fs FileStore) Location() string {
+  return fs.Directory
+}
+
+func (fs FileStore) Exists( name string ) bool {
+  fi, err := os.Stat(path.Join( fs.Directory,  name))
 
   if err != nil {
-    log.Println( "FileStore Exists problem on (" + fs.Directory + ", " + path + "): " + err )
+    log.Println( "FileStore Exists problem on (" + fs.Directory + ", " + name + "): ", err )
     return false
   }
   
@@ -22,21 +26,21 @@ func (fs FileStore) Exists( path string ) bool {
   return true
 }
 
-func (fs FileStore) Get( path string ) * Content {
-  file, err := os.Open(path.Join( fs.Directory,  path))
+func (fs FileStore) Get( name string ) * Content {
+  file, err := os.Open(path.Join( fs.Directory,  name))
   defer file.Close()
 
   if err != nil {
-    file, err = os.Open(path.Join( p.Default_Directory,  path))
+    file, err = os.Open(path.Join( fs.DefaultDirectory,  name))
     if err == nil { 
       enc := json.NewDecoder(file)
       c := new(Content)
       enc.Decode(c)
 
-      fs.Put( path, c )
+      fs.Put( name, c )
       return c
     } else {
-      log.Println( "FileStore Get problem on (" + fs.Default_Directory + ", " + path + "): " + err )
+      log.Println( "FileStore Get problem on (" + fs.DefaultDirectory + ", " + name + "): ", err )
       return nil
     }
   }
@@ -47,18 +51,18 @@ func (fs FileStore) Get( path string ) * Content {
   return c
 }
 
-func (fs FileStore) Put( path string, content * Content ) {
-  fn := path.Join( p.Directory, path )
-  err2 := os.Rename(fn, path.Join( fn , "_" + strconv.Itoa( len( content.Journal ) )))
-  if err2 != nil {
-      log.Println( "FileStore Put [rename] problem on (" + fs.Directory + ", " + path + "): " + err )
+func (fs FileStore) Put( name string, content * Content ) {
+  fn := path.Join( fs.Directory, name )
+  err := os.Rename(fn, path.Join( fn , "_" + strconv.Itoa( len( content.Journal ) )))
+  if err != nil {
+      log.Println( "FileStore Put [rename] problem on (" + fs.Directory + ", " + name + "): ", err )
   }
 
   file, err := os.Create(fn)
   defer file.Close()
 
   if err != nil {
-      log.Println( "FileStore Put [create] problem on (" + fs.Directory + ", " + path + "): " + err )
+      log.Println( "FileStore Put [create] problem on (" + fs.Directory + ", " + name + "): ", err )
   }
 
   enc := json.NewEncoder(file)
