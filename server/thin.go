@@ -409,6 +409,13 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
     http.Error(w, http.StatusText(403), 403)
     return
   }
+  
+  site := RequestedSite( r )
+
+  if site == nil {
+    log.Println( "Action Handler: unexpectedly site is nil!" )
+    http.Error(w, http.StatusText(403), 403)
+  }
 
   vars := mux.Vars( r )
 
@@ -441,35 +448,34 @@ func ActionHandler ( w http.ResponseWriter, r *http.Request ) {
     log.Println( "> " + entry.Item.Text )
   }
   
-  page := new(Page)
+  content := new(Content)
 
   switch entry.Type {
     case "add": {
-      page.Read( vars["slug"] )
-      page.AddItem( &entry )
-      page.Write( vars["slug"] ) 
+      content = site.Data.Get( vars["slug"] )
+      content.AddItem( &entry )
+      site.Data.Put( vars["slug"], content ) 
     }
     case "edit": {
-      page.Read( vars["slug"] )
-      page.ReplaceItem( &entry )
-      page.Write( vars["slug"] )
+      content = site.Data.Get( vars["slug"] )
+      content.ReplaceItem( &entry )
+      site.Data.Put( vars["slug"], content )
     }
     case "create": {
       if entry.Item != nil {
-        page.Body = new( Content )
-        page.Body.Title = entry.Item.Title
+        content.Title = entry.Item.Title
       }
-      page.AddEntry( &entry )
-      page.Create( vars["slug"] )
+      content.AddEntry( &entry )
+      site.Data.Put( vars["slug"], content )
     }
     case "move": {
-      page.Read( vars["slug"] )
-      page.Reorder( &entry )
-      page.Write( vars["slug"] )
+      content = site.Data.Get( vars["slug"] )
+      content.Reorder( &entry )
+      site.Data.Put( vars["slug"], content )
     }
   }
 
-  log.Println( page )
+  log.Println( content )
 }
 
 func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {

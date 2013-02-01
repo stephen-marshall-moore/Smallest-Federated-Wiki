@@ -26,21 +26,23 @@
     </div>
     {{end}}
     </section>
-    <footer class="login">
       {{if .Login}}
+    <footer class="logout">
       <form action="/logout" method="POST">
       <span class="provider">
         <input type="button" title="Logout" value="Logout"></input>
       </span>
       </form>
+    </footer>
       {{else}}
+    <footer class="login">
       <form action="/login" method="POST">
       <span class="provider">
         <input type="button" title="Google" value="G" data-provider="https://www.google.com/accounts/o8/id"></input>
         <input type="button" title="Yahoo!" value="Y" data-provider="https://me.yahoo.com"></input>
       </span>
       </form>
-      {{end}}
     </footer>
+      {{end}}
   </body>
 </html>

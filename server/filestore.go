@@ -27,7 +27,7 @@ func (fs FileStore) Exists( name string ) bool {
 }
 
 func (fs FileStore) Get( name string ) * Content {
-  file, err := os.Open(path.Join( fs.Directory,  name))
+  file, err := os.Open(path.Join( fs.Directory, "pages",  name))
   defer file.Close()
 
   if err != nil {
@@ -52,10 +52,10 @@ func (fs FileStore) Get( name string ) * Content {
 }
 
 func (fs FileStore) Put( name string, content * Content ) {
-  fn := path.Join( fs.Directory, name )
-  err := os.Rename(fn, path.Join( fn , "_" + strconv.Itoa( len( content.Journal ) )))
+  fn := path.Join( fs.Directory, "pages", name )
+  err := os.Rename(fn, fn + "_" + strconv.Itoa( len( content.Journal ) ))
   if err != nil {
-      log.Println( "FileStore Put [rename] problem on (" + fs.Directory + ", " + name + "): ", err )
+      log.Println( "FileStore Put [rename] problem on (" + fs.Directory + "/pages/, " + name + "): ", err )
   }
 
   file, err := os.Create(fn)
