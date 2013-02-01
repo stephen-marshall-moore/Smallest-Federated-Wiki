@@ -130,6 +130,7 @@ func JsonHandler ( w http.ResponseWriter, r *http.Request ) {
 
   site := RequestedSite( r )
   if site != nil {
+    w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
     vars := mux.Vars(r)
     fname = path.Join( site.Data.Location(), "pages", vars["slug"] )
     log.Println( "JsonHandler: " + fname )
@@ -290,7 +291,12 @@ func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
 }
 
 func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
-  appRoot := "/home/stephen/hacking/fedwiki"
+  //appRoot := "/home/stephen/hacking/fedwiki"
+  
+  site := RequestedSite( r )
+
+  if site == nil {
+  }
 
   w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
@@ -302,7 +308,8 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
 
   //slugs, err := ioutil.ReadDir(dirname)
 
-  pattern := appRoot + "/server/data/*"
+  pattern := path.Join( site.Data.Location() , "pages", "*" )
+
   slugs, err := filepath.Glob(pattern)
 
   if err != nil {
@@ -519,5 +526,8 @@ func main() {
     route.HandlerFunc(MultiViewHandler)
 
     http.Handle("/", r)
-    http.ListenAndServe(":8080", nil)
+    err := http.ListenAndServe(":8080", nil)
+    if err != nil {
+      log.Fatal( err )
+    }
 }

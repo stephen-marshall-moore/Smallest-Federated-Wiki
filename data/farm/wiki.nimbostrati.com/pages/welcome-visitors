@@ -135,7 +135,7 @@
     },
     {
       "type": "fork",
-      "site": "wiki.nimbostrati.com",
+      "site": "wiki.nimbostrati.com:8080",
       "date": 1344306178918
     },
     {
