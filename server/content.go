@@ -1,6 +1,8 @@
 package main
 
 import (
+  "log"
+  "strings"
 )
 
 func (c * Content) Synopsis () string {
@@ -43,8 +45,13 @@ func (c * Content) AddEntry ( e * Entry ) {
   c.Journal = append( c.Journal, e )
 }
 
-func (c * Content) ReplaceItem ( e * Entry ) {  
+func (c * Content) ReplaceItem ( e * Entry ) { 
   var story [] * Item
+
+  // make sure entry's item type has no whitespace
+  e.Item.Type = strings.Trim( e.Item.Type, "\n " )
+  
+  log.Println( "ReplaceItem:: what type: " + e.Item.Type )
 
   for _, x := range c.Story {
     if x.Id == e.Id {

@@ -217,7 +217,7 @@ func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
   }
 }
 
-
+/*
 func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
   //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
   vars := mux.Vars(r)
@@ -242,6 +242,7 @@ func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
   if err != nil { panic(err) }
 
 }
+*/
 
 func IsAuthenticated ( r * http.Request ) bool {
   session, _ := cookieStore.Get( r, "wiki-woko" )
