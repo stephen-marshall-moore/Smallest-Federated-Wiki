@@ -19,16 +19,17 @@ import (
   "github.com/yohcop/openid.go/src/openid"
 )
 
-var rootDefault = "/home/stephen/hacking/fedwiki/default-data"
+var appRoot = "/home/stephen/hacking"
+var rootDefault = appRoot + "/fedwiki/default-data"
 
 var baseStore = FileStore {
-  Directory: "/home/stephen/hacking/fedwiki/data/farm/wiki.nimbostrati.com",
+  Directory: appRoot + "/fedwiki/data/farm/wiki.nimbostrati.com",
   DefaultDirectory: rootDefault }
 
 var base = Site {
   Domain: "wiki.nimbostrati.com",
   Data: baseStore,
-  ClientDirectory: "/home/stephen/hacking/fedwiki/client" }
+  ClientDirectory: appRoot + "/fedwiki/client" }
 
 var sites = map[string] *Site { base.Domain : &base }
 
@@ -217,33 +218,6 @@ func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
   }
 }
 
-/*
-func ViewHandler ( w http.ResponseWriter, r *http.Request ) {
-  //fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
-  vars := mux.Vars(r)
-  id := vars["id"]
-
-  var page Page
-
-  file, err := os.Open("/home/stephen/hacking/fedwiki/server/data/" + id) // For read access.
-  defer file.Close()
-
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  enc := json.NewDecoder(file)
-  enc.Decode(&page)
-
-  tmpl, err := template.ParseFiles("/home/stephen/hacking/fedwiki/server/templates/layout.html")
-  
-  if err != nil { panic(err) }
-  err = tmpl.Execute(w, page)
-  if err != nil { panic(err) }
-
-}
-*/
-
 func IsAuthenticated ( r * http.Request ) bool {
   session, _ := cookieStore.Get( r, "wiki-woko" )
 
@@ -271,7 +245,7 @@ func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
     data[i] = datum
   } 
     
-  tmpl, err := template.ParseFiles("/home/stephen/hacking/fedwiki/server/templates/layout.html")
+  tmpl, err := template.ParseFiles(appRoot + "/fedwiki/server/templates/layout.html")
   
   if err != nil { panic(err) }
   /***
@@ -301,14 +275,6 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
 
   w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
-  //dirnamesmap := map[string] string { "sitemap" : "server/data", "factories" : "client/images" }
-  //vars := mux.Vars(r)
-  //dirname := "/home/stephen/hacking/fedwiki/" + dirnamesmap[vars["map"]]
-
-  //log.Println( dirname )
-
-  //slugs, err := ioutil.ReadDir(dirname)
-
   pattern := path.Join( site.Data.Location() , "pages", "*" )
 
   slugs, err := filepath.Glob(pattern)
@@ -324,8 +290,8 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
     //if value.IsDir() != true {
       item := new( MapItem )
 
-      info := new( Page )
-      info.Body = new( Content )
+      info := new( Content )
+      //info.Body = new( Content )
 
       file, err := os.Open(value)
       if err != nil {
@@ -338,11 +304,11 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
       }
 
       enc := json.NewDecoder(file)
-      enc.Decode(info.Body)
+      enc.Decode(info)
 
       item.Slug = path.Base(value)
       item.Date = fi.ModTime().Unix()
-      item.Title = info.Body.Title
+      item.Title = info.Title
       item.Synopsis = info.Synopsis()
 
       items = append(items, item)
@@ -356,7 +322,7 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
 }
 
 func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
-  appRoot := "/home/stephen/hacking/fedwiki"
+  appHome := appRoot + "/fedwiki"
 
   w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
@@ -368,7 +334,7 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
 
   //slugs, err := ioutil.ReadDir(dirname)
 
-  pattern := appRoot + "/client/plugins/*/factory.json"
+  pattern := appHome + "/client/plugins/*/factory.json"
   slugs, err := filepath.Glob(pattern)
 
   if err != nil {
