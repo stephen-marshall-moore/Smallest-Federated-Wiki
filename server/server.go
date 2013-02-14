@@ -19,17 +19,18 @@ import (
   "github.com/yohcop/openid.go/src/openid"
 )
 
-var appRoot = "/home/stephen/hacking"
-var rootDefault = appRoot + "/fedwiki/default-data"
+var appRoot = "/home/fedwiki/smallest/src"
+var dataRoot = "/home/fedwiki/smallest/data"
+var rootDefault = appRoot + "/server/default-data"
 
 var baseStore = FileStore {
-  Directory: appRoot + "/fedwiki/data/farm/wiki.nimbostrati.com",
+  Directory: dataRoot + "/farm/wiki.nimbostrati.com",
   DefaultDirectory: rootDefault }
 
 var base = Site {
   Domain: "wiki.nimbostrati.com",
   Data: baseStore,
-  ClientDirectory: appRoot + "/fedwiki/client" }
+  ClientDirectory: appRoot + "/client" }
 
 var sites = map[string] *Site { base.Domain : &base }
 
@@ -245,7 +246,7 @@ func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
     data[i] = datum
   } 
     
-  tmpl, err := template.ParseFiles(appRoot + "/fedwiki/server/templates/layout.html")
+  tmpl, err := template.ParseFiles(appRoot + "/server/templates/layout.html")
   
   if err != nil { panic(err) }
   /***
@@ -322,7 +323,7 @@ func SiteMapHandler ( w http.ResponseWriter, r *http.Request ) {
 }
 
 func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
-  appHome := appRoot + "/fedwiki"
+  //appHome := appRoot + "/fedwiki"
 
   w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
 
@@ -334,7 +335,7 @@ func FactoriesHandler ( w http.ResponseWriter, r *http.Request ) {
 
   //slugs, err := ioutil.ReadDir(dirname)
 
-  pattern := appHome + "/client/plugins/*/factory.json"
+  pattern := appRoot + "/client/plugins/*/factory.json"
   slugs, err := filepath.Glob(pattern)
 
   if err != nil {
