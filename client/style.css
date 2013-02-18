@@ -184,11 +184,16 @@ footer {
 .data p,
 .chart p,
 .footer a,
-.image p {
+.image p,
+p.caption {
   text-align: center;
   margin-bottom: 0;
   color: gray;
   font-size: 70%; }
+
+.twins p {
+  color: gray;
+}
 
 image.remote {
   width:16px;
@@ -221,6 +226,10 @@ p.readout {
 
 .page.local {
   box-shadow: inset 0px 0px 40px 0px rgba(220,180,0,.7);
+}
+
+.page.remote {
+  box-shadow: inset 0px 0px 40px 0px rgba(0,180,220,.5);
 }
 
 .factory,

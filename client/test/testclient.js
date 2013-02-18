@@ -391,150 +391,100 @@ process.binding = function (name) {
 
 });
 
-require.define("/lib/util.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
-  var util;
+require.define("/lib/wiki.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
+  var createSynopsis, wiki,
+    __slice = [].slice;
 
-  module.exports = wiki.util = util = {};
+  createSynopsis = require('./synopsis');
 
-  util.createSynopsis = require('./synopsis');
-
-  util.symbols = {
-    create: '☼',
-    add: '+',
-    edit: '✎',
-    fork: '⚑',
-    move: '↕',
-    remove: '✕'
+  wiki = {
+    createSynopsis: createSynopsis
   };
 
-  util.resolveLinks = function(string) {
+  wiki.log = function() {
+    var things;
+    things = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    if ((typeof console !== "undefined" && console !== null ? console.log : void 0) != null) {
+      return console.log.apply(console, things);
+    }
+  };
+
+  wiki.asSlug = function(name) {
+    return name.replace(/\s/g, '-').replace(/[^A-Za-z0-9-]/g, '').toLowerCase();
+  };
+
+  wiki.useLocalStorage = function() {
+    return $(".login").length > 0;
+  };
+
+  wiki.resolutionContext = [];
+
+  wiki.resolveFrom = function(addition, callback) {
+    wiki.resolutionContext.push(addition);
+    try {
+      return callback();
+    } finally {
+      wiki.resolutionContext.pop();
+    }
+  };
+
+  wiki.getData = function(vis) {
+    var idx, who;
+    if (vis) {
+      idx = $('.item').index(vis);
+      who = $(".item:lt(" + idx + ")").filter('.chart,.data,.calculator').last();
+      if (who != null) {
+        return who.data('item').data;
+      } else {
+        return {};
+      }
+    } else {
+      who = $('.chart,.data,.calculator').last();
+      if (who != null) {
+        return who.data('item').data;
+      } else {
+        return {};
+      }
+    }
+  };
+
+  wiki.getDataNodes = function(vis) {
+    var idx, who;
+    if (vis) {
+      idx = $('.item').index(vis);
+      who = $(".item:lt(" + idx + ")").filter('.chart,.data,.calculator').toArray().reverse();
+      return $(who);
+    } else {
+      who = $('.chart,.data,.calculator').toArray().reverse();
+      return $(who);
+    }
+  };
+
+  wiki.createPage = function(name, loc) {
+    if (loc && loc !== 'view') {
+      return $("<div/>").attr('id', name).attr('data-site', loc).addClass("page");
+    } else {
+      return $("<div/>").attr('id', name).addClass("page");
+    }
+  };
+
+  wiki.getItem = function(element) {
+    if ($(element).length > 0) {
+      return $(element).data("item") || $(element).data('staticItem');
+    }
+  };
+
+  wiki.resolveLinks = function(string) {
     var renderInternalLink;
     renderInternalLink = function(match, name) {
       var slug;
-      slug = util.asSlug(name);
+      slug = wiki.asSlug(name);
       return "<a class=\"internal\" href=\"/" + slug + ".html\" data-page-name=\"" + slug + "\" title=\"" + (wiki.resolutionContext.join(' => ')) + "\">" + name + "</a>";
     };
     return string.replace(/\[\[([^\]]+)\]\]/gi, renderInternalLink).replace(/\[(http.*?) (.*?)\]/gi, "<a class=\"external\" target=\"_blank\" href=\"$1\" title=\"$1\" rel=\"nofollow\">$2 <img src=\"/images/external-link-ltr-icon.png\"></a>");
   };
 
-  util.randomByte = function() {
-    return (((1 + Math.random()) * 0x100) | 0).toString(16).substring(1);
-  };
-
-  util.randomBytes = function(n) {
-    return ((function() {
-      var _i, _results;
-      _results = [];
-      for (_i = 1; 1 <= n ? _i <= n : _i >= n; 1 <= n ? _i++ : _i--) {
-        _results.push(util.randomByte());
-      }
-      return _results;
-    })()).join('');
-  };
-
-  util.formatTime = function(time) {
-    var am, d, h, mi, mo;
-    d = new Date((time > 10000000000 ? time : time * 1000));
-    mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
-    h = d.getHours();
-    am = h < 12 ? 'AM' : 'PM';
-    h = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    mi = (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
-    return "" + h + ":" + mi + " " + am + "<br>" + (d.getDate()) + " " + mo + " " + (d.getFullYear());
-  };
-
-  util.formatDate = function(msSinceEpoch) {
-    var am, d, day, h, mi, mo, sec, wk, yr;
-    d = new Date(msSinceEpoch);
-    wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-    mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
-    day = d.getDate();
-    yr = d.getFullYear();
-    h = d.getHours();
-    am = h < 12 ? 'AM' : 'PM';
-    h = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    mi = (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
-    sec = (d.getSeconds() < 10 ? "0" : "") + d.getSeconds();
-    return "" + wk + " " + mo + " " + day + ", " + yr + "<br>" + h + ":" + mi + ":" + sec + " " + am;
-  };
-
-  util.formatElapsedTime = function(msSinceEpoch) {
-    var days, hrs, mins, months, msecs, secs, weeks, years;
-    msecs = new Date().getTime() - msSinceEpoch;
-    if ((secs = msecs / 1000) < 2) {
-      return "" + (Math.floor(msecs)) + " milliseconds ago";
-    }
-    if ((mins = secs / 60) < 2) {
-      return "" + (Math.floor(secs)) + " seconds ago";
-    }
-    if ((hrs = mins / 60) < 2) {
-      return "" + (Math.floor(mins)) + " minutes ago";
-    }
-    if ((days = hrs / 24) < 2) {
-      return "" + (Math.floor(hrs)) + " hours ago";
-    }
-    if ((weeks = days / 7) < 2) {
-      return "" + (Math.floor(days)) + " days ago";
-    }
-    if ((months = days / 31) < 2) {
-      return "" + (Math.floor(weeks)) + " weeks ago";
-    }
-    if ((years = days / 365) < 2) {
-      return "" + (Math.floor(months)) + " months ago";
-    }
-    return "" + (Math.floor(years)) + " years ago";
-  };
-
-  util.asSlug = function(name) {
-    return name.replace(/\s/g, '-').replace(/[^A-Za-z0-9-]/g, '').toLowerCase();
-  };
-
-  if (typeof wiki !== "undefined" && wiki !== null) {
-    wiki.asSlug = util.asSlug;
-  }
-
-  util.emptyPage = function() {
-    return {
-      title: 'empty',
-      story: [],
-      journal: []
-    };
-  };
-
-  util.getSelectionPos = function(jQueryElement) {
-    var el, iePos, sel;
-    el = jQueryElement.get(0);
-    if (document.selection) {
-      el.focus();
-      sel = document.selection.createRange();
-      sel.moveStart('character', -el.value.length);
-      iePos = sel.text.length;
-      return {
-        start: iePos,
-        end: iePos
-      };
-    } else {
-      return {
-        start: el.selectionStart,
-        end: el.selectionEnd
-      };
-    }
-  };
-
-  util.setCaretPosition = function(jQueryElement, caretPos) {
-    var el, range;
-    el = jQueryElement.get(0);
-    if (el != null) {
-      if (el.createTextRange) {
-        range = el.createTextRange();
-        range.move("character", caretPos);
-        range.select();
-      } else {
-        el.setSelectionRange(caretPos, caretPos);
-      }
-      return el.focus();
-    }
-  };
+  module.exports = wiki;
 
 }).call(this);
 
@@ -610,7 +560,7 @@ require.define("/test/util.coffee",function(require,module,exports,__dirname,__f
     });
     it('should slug a name', function() {
       var s;
-      s = util.asSlug('Welcome Visitors');
+      s = wiki.asSlug('Welcome Visitors');
       return expect(s).to.be('welcome-visitors');
     });
     it('should make emptyPage page with title, story and journal', function() {
@@ -630,6 +580,135 @@ require.define("/test/util.coffee",function(require,module,exports,__dirname,__f
       return expect(page.story).to.eql([]);
     });
   });
+
+}).call(this);
+
+});
+
+require.define("/lib/util.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
+  var util;
+
+  module.exports = wiki.util = util = {};
+
+  util.symbols = {
+    create: '☼',
+    add: '+',
+    edit: '✎',
+    fork: '⚑',
+    move: '↕',
+    remove: '✕'
+  };
+
+  util.randomByte = function() {
+    return (((1 + Math.random()) * 0x100) | 0).toString(16).substring(1);
+  };
+
+  util.randomBytes = function(n) {
+    return ((function() {
+      var _i, _results;
+      _results = [];
+      for (_i = 1; 1 <= n ? _i <= n : _i >= n; 1 <= n ? _i++ : _i--) {
+        _results.push(util.randomByte());
+      }
+      return _results;
+    })()).join('');
+  };
+
+  util.formatTime = function(time) {
+    var am, d, h, mi, mo;
+    d = new Date((time > 10000000000 ? time : time * 1000));
+    mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+    h = d.getHours();
+    am = h < 12 ? 'AM' : 'PM';
+    h = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    mi = (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+    return "" + h + ":" + mi + " " + am + "<br>" + (d.getDate()) + " " + mo + " " + (d.getFullYear());
+  };
+
+  util.formatDate = function(msSinceEpoch) {
+    var am, d, day, h, mi, mo, sec, wk, yr;
+    d = new Date(msSinceEpoch);
+    wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+    mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+    day = d.getDate();
+    yr = d.getFullYear();
+    h = d.getHours();
+    am = h < 12 ? 'AM' : 'PM';
+    h = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    mi = (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+    sec = (d.getSeconds() < 10 ? "0" : "") + d.getSeconds();
+    return "" + wk + " " + mo + " " + day + ", " + yr + "<br>" + h + ":" + mi + ":" + sec + " " + am;
+  };
+
+  util.formatElapsedTime = function(msSinceEpoch) {
+    var days, hrs, mins, months, msecs, secs, weeks, years;
+    msecs = new Date().getTime() - msSinceEpoch;
+    if ((secs = msecs / 1000) < 2) {
+      return "" + (Math.floor(msecs)) + " milliseconds ago";
+    }
+    if ((mins = secs / 60) < 2) {
+      return "" + (Math.floor(secs)) + " seconds ago";
+    }
+    if ((hrs = mins / 60) < 2) {
+      return "" + (Math.floor(mins)) + " minutes ago";
+    }
+    if ((days = hrs / 24) < 2) {
+      return "" + (Math.floor(hrs)) + " hours ago";
+    }
+    if ((weeks = days / 7) < 2) {
+      return "" + (Math.floor(days)) + " days ago";
+    }
+    if ((months = days / 31) < 2) {
+      return "" + (Math.floor(weeks)) + " weeks ago";
+    }
+    if ((years = days / 365) < 2) {
+      return "" + (Math.floor(months)) + " months ago";
+    }
+    return "" + (Math.floor(years)) + " years ago";
+  };
+
+  util.emptyPage = function() {
+    return {
+      title: 'empty',
+      story: [],
+      journal: []
+    };
+  };
+
+  util.getSelectionPos = function(jQueryElement) {
+    var el, iePos, sel;
+    el = jQueryElement.get(0);
+    if (document.selection) {
+      el.focus();
+      sel = document.selection.createRange();
+      sel.moveStart('character', -el.value.length);
+      iePos = sel.text.length;
+      return {
+        start: iePos,
+        end: iePos
+      };
+    } else {
+      return {
+        start: el.selectionStart,
+        end: el.selectionEnd
+      };
+    }
+  };
+
+  util.setCaretPosition = function(jQueryElement, caretPos) {
+    var el, range;
+    el = jQueryElement.get(0);
+    if (el != null) {
+      if (el.createTextRange) {
+        range = el.createTextRange();
+        range.move("character", caretPos);
+        range.select();
+      } else {
+        el.setSelectionRange(caretPos, caretPos);
+      }
+      return el.focus();
+    }
+  };
 
 }).call(this);
 
@@ -729,8 +808,6 @@ require.define("/test/pageHandler.coffee",function(require,module,exports,__dirn
   wiki.useLocalStorage = function() {
     return false;
   };
-
-  wiki.addToJournal = function() {};
 
   describe('pageHandler.get', function() {
     var genericPageData, genericPageInformation, pageInformationWithoutSite;
@@ -836,13 +913,11 @@ require.define("/test/pageHandler.coffee",function(require,module,exports,__dirn
           id: 1
         }
       };
-      wiki.addToJournal = function() {
-        expect(jQuery.ajax.args[0][0].data).to.eql({
-          action: JSON.stringify(action)
-        });
-        return done();
-      };
-      return pageHandler.put($('#pageHandler3'), action);
+      pageHandler.put($('#pageHandler3'), action);
+      expect(jQuery.ajax.args[0][0].data).to.eql({
+        action: JSON.stringify(action)
+      });
+      return done();
     });
     return after(function() {
       return jQuery.ajax.restore();
@@ -854,13 +929,15 @@ require.define("/test/pageHandler.coffee",function(require,module,exports,__dirn
 });
 
 require.define("/lib/pageHandler.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
-  var pageFromLocalStorage, pageHandler, pushToLocal, pushToServer, recursiveGet, revision, state, util;
+  var addToJournal, pageFromLocalStorage, pageHandler, pushToLocal, pushToServer, recursiveGet, revision, state, util;
 
   util = require('./util');
 
   state = require('./state');
 
   revision = require('./revision');
+
+  addToJournal = require('./addToJournal');
 
   module.exports = pageHandler = {};
 
@@ -990,7 +1067,7 @@ require.define("/lib/pageHandler.coffee",function(require,module,exports,__dirna
       return $(this).data("item");
     }).get();
     localStorage[pagePutInfo.slug] = JSON.stringify(page);
-    return wiki.addToJournal(pageElement.find('.journal'), action);
+    return addToJournal(pageElement.find('.journal'), action);
   };
 
   pushToServer = function(pageElement, pagePutInfo, action) {
@@ -1001,7 +1078,7 @@ require.define("/lib/pageHandler.coffee",function(require,module,exports,__dirna
         'action': JSON.stringify(action)
       },
       success: function() {
-        wiki.addToJournal(pageElement.find('.journal'), action);
+        addToJournal(pageElement.find('.journal'), action);
         if (action.type === 'fork') {
           localStorage.removeItem(pageElement.attr('id'));
           return state.setUrl;
@@ -1052,10 +1129,11 @@ require.define("/lib/pageHandler.coffee",function(require,module,exports,__dirna
       pageElement.find('h1 img').attr('src', '/favicon.png');
       pageElement.find('h1 a').attr('href', '/');
       pageElement.data('site', null);
+      pageElement.removeClass('remote');
       state.setUrl();
       if (action.type !== 'fork') {
         action.fork = forkFrom;
-        wiki.addToJournal(pageElement.find('.journal'), {
+        addToJournal(pageElement.find('.journal'), {
           type: 'fork',
           site: forkFrom,
           date: action.date
@@ -1259,6 +1337,37 @@ require.define("/lib/revision.coffee",function(require,module,exports,__dirname,
 
 });
 
+require.define("/lib/addToJournal.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
+  var util;
+
+  util = require('./util');
+
+  module.exports = function(journalElement, action) {
+    var actionElement, actionTitle, controls, pageElement, prev;
+    pageElement = journalElement.parents('.page:first');
+    if (action.type === 'edit') {
+      prev = journalElement.find(".edit[data-id=" + (action.id || 0) + "]");
+    }
+    actionTitle = action.type;
+    if (action.date != null) {
+      actionTitle += " " + (util.formatElapsedTime(action.date));
+    }
+    actionElement = $("<a href=\"#\" /> ").addClass("action").addClass(action.type).text(util.symbols[action.type]).attr('title', actionTitle).attr('data-id', action.id || "0").data('action', action);
+    controls = journalElement.children('.control-buttons');
+    if (controls.length > 0) {
+      actionElement.insertBefore(controls);
+    } else {
+      actionElement.appendTo(journalElement);
+    }
+    if (action.type === 'fork' && (action.site != null)) {
+      return actionElement.css("background-image", "url(//" + action.site + "/favicon.png)").attr("href", "//" + action.site + "/" + (pageElement.attr('id')) + ".html").data("site", action.site).data("slug", pageElement.attr('id'));
+    }
+  };
+
+}).call(this);
+
+});
+
 require.define("/test/mockServer.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
   var simulatePageFound, simulatePageNotFound;
 
@@ -1327,7 +1436,7 @@ require.define("/test/refresh.coffee",function(require,module,exports,__dirname,
 });
 
 require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
-  var buildPageHeader, createFactory, emitHeader, handleDragging, initAddButton, initDragging, neighborhood, pageHandler, plugin, refresh, renderPageIntoPageElement, state, util,
+  var addToJournal, buildPageHeader, createFactory, emitHeader, emitTwins, handleDragging, initAddButton, initDragging, neighborhood, pageHandler, plugin, refresh, renderPageIntoPageElement, state, util, wiki,
     __slice = [].slice;
 
   util = require('./util.coffee');
@@ -1339,6 +1448,10 @@ require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,_
   state = require('./state.coffee');
 
   neighborhood = require('./neighborhood.coffee');
+
+  addToJournal = require('./addToJournal');
+
+  wiki = require('./wiki');
 
   handleDragging = function(evt, ui) {
     var action, before, beforeElement, destinationPageElement, equals, item, itemElement, moveFromPage, moveToPage, moveWithinPage, order, sourcePageElement, sourceSite, thisPageElement;
@@ -1422,18 +1535,19 @@ require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,_
   };
 
   emitHeader = function($page, page) {
-    var date, header, isRemotePage, pageHeader, rev, site;
+    var date, header, isRemotePage, pageHeader, rev, site, viewHere;
     site = $page.data('site');
     isRemotePage = (site != null) && site !== 'local' && site !== 'origin' && site !== 'view';
     header = '';
+    viewHere = wiki.asSlug(page.title) === 'welcome-visitors' ? "" : "/view/" + (wiki.asSlug(page.title));
     pageHeader = isRemotePage ? buildPageHeader({
       tooltip: site,
-      header_href: "//" + site,
+      header_href: "//" + site + "/view/welcome-visitors" + viewHere,
       favicon_src: "http://" + site + "/favicon.png",
       title: page.title
     }) : buildPageHeader({
       tooltip: location.host,
-      header_href: "/",
+      header_href: "/view/welcome-visitors" + viewHere,
       favicon_src: "/favicon.png",
       title: page.title
     });
@@ -1445,14 +1559,76 @@ require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,_
         });
       });
     }
-    if ((rev = $page.attr('id').split('_rev')[1]) != null) {
-      date = page.journal[page.journal.length - 1].date;
+    if ($page.attr('id').match(/_rev/)) {
+      rev = page.journal.length - 1;
+      date = page.journal[rev].date;
       return $page.addClass('ghost').data('rev', rev).append($("<h2 class=\"revision\">\n  <span>\n    " + (date != null ? util.formatDate(date) : "Revision " + rev) + "\n  </span>\n</h2>"));
     }
   };
 
+  emitTwins = wiki.emitTwins = function($page) {
+    var actions, bin, bins, flags, i, info, item, legend, page, remoteSite, site, slug, twins, viewing, _i, _len, _ref, _ref1, _ref2, _ref3;
+    page = $page.data('data');
+    site = $page.data('site') || window.location.host;
+    if (site === 'view' || site === 'origin') {
+      site = window.location.host;
+    }
+    slug = wiki.asSlug(page.title);
+    if (((actions = (_ref = page.journal) != null ? _ref.length : void 0) != null) && ((viewing = (_ref1 = page.journal[actions - 1]) != null ? _ref1.date : void 0) != null)) {
+      viewing = Math.floor(viewing / 1000) * 1000;
+      bins = {
+        newer: [],
+        same: [],
+        older: []
+      };
+      _ref2 = wiki.neighborhood;
+      for (remoteSite in _ref2) {
+        info = _ref2[remoteSite];
+        if (remoteSite !== site && (info.sitemap != null)) {
+          _ref3 = info.sitemap;
+          for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+            item = _ref3[_i];
+            if (item.slug === slug) {
+              bin = item.date > viewing ? bins.newer : item.date < viewing ? bins.older : bins.same;
+              bin.push({
+                remoteSite: remoteSite,
+                item: item
+              });
+            }
+          }
+        }
+      }
+      twins = [];
+      for (legend in bins) {
+        bin = bins[legend];
+        if (!bin.length) {
+          continue;
+        }
+        bin.sort(function(a, b) {
+          return a.item.date < b.item.date;
+        });
+        flags = (function() {
+          var _j, _len1, _ref4, _results;
+          _results = [];
+          for (i = _j = 0, _len1 = bin.length; _j < _len1; i = ++_j) {
+            _ref4 = bin[i], remoteSite = _ref4.remoteSite, item = _ref4.item;
+            if (i >= 8) {
+              break;
+            }
+            _results.push("<img class=\"remote\"\nsrc=\"http://" + remoteSite + "/favicon.png\"\ndata-slug=\"" + slug + "\"\ndata-site=\"" + remoteSite + "\"\ntitle=\"" + remoteSite + "\">");
+          }
+          return _results;
+        })();
+        twins.push("" + (flags.join('&nbsp;')) + " " + legend);
+      }
+      if (twins) {
+        return $page.find('.twins').html("<p>" + (twins.join(", ")) + "</p>");
+      }
+    }
+  };
+
   renderPageIntoPageElement = function(pageData, $page, siteFound) {
-    var $footer, $journal, $story, action, addContext, context, emitItem, page, site, slug, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var $footer, $journal, $story, $twins, action, addContext, context, emitItem, page, site, slug, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     page = $.extend(util.emptyPage(), pageData);
     $page.data("data", page);
     slug = $page.attr('id');
@@ -1473,27 +1649,33 @@ require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,_
     }
     wiki.resolutionContext = context;
     emitHeader($page, page);
-    _ref1 = ['story', 'journal', 'footer'].map(function(className) {
+    _ref1 = ['twins', 'story', 'journal', 'footer'].map(function(className) {
       return $("<div />").addClass(className).appendTo($page);
-    }), $story = _ref1[0], $journal = _ref1[1], $footer = _ref1[2];
+    }), $twins = _ref1[0], $story = _ref1[1], $journal = _ref1[2], $footer = _ref1[3];
     emitItem = function(i) {
       var $item, item;
       if (i >= page.story.length) {
         return;
       }
       item = page.story[i];
-      $item = $("<div class=\"item " + item.type + "\" data-id=\"" + item.id + "\">");
-      $story.append($item);
-      return plugin["do"]($item, item, function() {
+      if ((item != null ? item.type : void 0) && (item != null ? item.id : void 0)) {
+        $item = $("<div class=\"item " + item.type + "\" data-id=\"" + item.id + "\">");
+        $story.append($item);
+        return plugin["do"]($item, item, function() {
+          return emitItem(i + 1);
+        });
+      } else {
+        $story.append($("<div><p class=\"error\">Can't make sense of story[" + i + "]</p></div>"));
         return emitItem(i + 1);
-      });
+      }
     };
     emitItem(0);
     _ref2 = page.journal;
     for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
       action = _ref2[_j];
-      wiki.addToJournal($journal, action);
+      addToJournal($journal, action);
     }
+    emitTwins($page);
     $journal.append("<div class=\"control-buttons\">\n  <a href=\"#\" class=\"button fork-page\" title=\"fork this page\">" + util.symbols['fork'] + "</a>\n  <a href=\"#\" class=\"button add-factory\" title=\"add paragraph\">" + util.symbols['add'] + "</a>\n</div>");
     return $footer.append("<a id=\"license\" href=\"http://creativecommons.org/licenses/by-sa/3.0/\">CC BY-SA 3.0</a> .\n<a class=\"show-page-source\" href=\"/" + slug + ".json?random=" + (util.randomBytes(4)) + "\" title=\"source\">JSON</a> .\n<a>" + (siteFound || 'origin') + "</a>");
   };
@@ -1501,7 +1683,13 @@ require.define("/lib/refresh.coffee",function(require,module,exports,__dirname,_
   wiki.buildPage = function(data, siteFound, $page) {
     if (siteFound === 'local') {
       $page.addClass('local');
-    } else {
+    } else if (siteFound) {
+      if (siteFound === window.location.host) {
+        siteFound = 'origin';
+      }
+      if (siteFound !== 'view' && siteFound !== 'origin') {
+        $page.addClass('remote');
+      }
       $page.data('site', siteFound);
     }
     renderPageIntoPageElement(data, $page, siteFound);
@@ -1688,7 +1876,18 @@ require.define("/lib/plugin.coffee",function(require,module,exports,__dirname,__
   window.plugins = {
     paragraph: {
       emit: function(div, item) {
-        return div.append("<p>" + (wiki.resolveLinks(item.text)) + "</p>");
+        var text, _i, _len, _ref, _results;
+        _ref = item.text.split(/\n\n+/);
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          text = _ref[_i];
+          if (text.match(/\S/)) {
+            _results.push(div.append("<p>" + (wiki.resolveLinks(text)) + "</p>"));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
       },
       bind: function(div, item) {
         return div.dblclick(function() {
@@ -1893,8 +2092,6 @@ require.define("/lib/search.coffee",function(require,module,exports,__dirname,__
 
   active = require('./active');
 
-  require('./dom');
-
   createSearch = function(_arg) {
     var neighborhood, performSearch;
     neighborhood = _arg.neighborhood;
@@ -1939,20 +2136,6 @@ require.define("/lib/search.coffee",function(require,module,exports,__dirname,__
   };
 
   module.exports = createSearch;
-
-}).call(this);
-
-});
-
-require.define("/lib/dom.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
-
-  wiki.createPage = function(name, loc) {
-    if (loc && loc !== 'view') {
-      return $("<div/>").attr('id', name).attr('data-site', loc).addClass("page");
-    } else {
-      return $("<div/>").attr('id', name).addClass("page");
-    }
-  };
 
 }).call(this);
 
@@ -2387,6 +2570,152 @@ require.define("/test/search.coffee",function(require,module,exports,__dirname,_
       return expect(spyNeighborhood.search.args[0][0]).to.be('some search query');
     });
   });
+
+}).call(this);
+
+});
+
+require.define("/plugins/calendar/calendar.js",function(require,module,exports,__dirname,__filename,process,global){// Generated by CoffeeScript 1.4.0
+(function() {
+  var apply, bind, emit, format, months, parse, show, span, spans;
+
+  months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+  spans = ['EARLY', 'LATE', 'DECADE', 'DAY', 'MONTH', 'YEAR'];
+
+  span = function(result, span) {
+    var m;
+    if ((m = spans.indexOf(result.span)) < 0) {
+      return result.span = span;
+    } else if ((spans.indexOf(span)) < m) {
+      return result.span = span;
+    }
+  };
+
+  parse = function(text) {
+    var i, line, m, result, rows, word, words, _i, _j, _len, _len1, _ref;
+    rows = [];
+    _ref = text.split(/\n/);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      line = _ref[_i];
+      result = {};
+      words = line.match(/\S+/g);
+      for (i = _j = 0, _len1 = words.length; _j < _len1; i = ++_j) {
+        word = words[i];
+        if (word.match(/^\d\d\d\d$/)) {
+          result.year = +word;
+          span(result, 'YEAR');
+        } else if (m = word.match(/^(\d0)S$/)) {
+          result.year = +m[1] + 1900;
+          span(result, 'DECADE');
+        } else if ((m = spans.indexOf(word)) >= 0) {
+          result.span = spans[m];
+        } else if ((m = months.indexOf(word.slice(0, 3))) >= 0) {
+          result.month = m + 1;
+          span(result, 'MONTH');
+        } else if (m = word.match(/^([1-3]?[0-9])$/)) {
+          result.day = +m[1];
+          span(result, 'DAY');
+        } else {
+          result.label = words.slice(i, 1000).join(' ');
+          break;
+        }
+      }
+      rows.push(result);
+    }
+    return rows;
+  };
+
+  apply = function(input, output, date, rows) {
+    var result, row, _i, _len, _ref, _ref1;
+    result = [];
+    for (_i = 0, _len = rows.length; _i < _len; _i++) {
+      row = rows[_i];
+      if (((_ref = input[row.label]) != null ? _ref.date : void 0) != null) {
+        date = input[row.label].date;
+      }
+      if (((_ref1 = output[row.label]) != null ? _ref1.date : void 0) != null) {
+        date = output[row.label].date;
+      }
+      if (row.year != null) {
+        date = new Date(row.year, 1 - 1);
+      }
+      if (row.month != null) {
+        date = new Date(date.getYear() + 1900, row.month - 1);
+      }
+      if (row.day != null) {
+        date = new Date(date.getYear() + 1900, date.getMonth(), row.day);
+      }
+      if (row.label != null) {
+        output[row.label] = {
+          date: date
+        };
+        if (row.span != null) {
+          output[row.label].span = row.span;
+        }
+      }
+      row.date = date;
+      result.push(row);
+    }
+    return result;
+  };
+
+  show = function(date, span) {
+    switch (span) {
+      case 'YEAR':
+        return date.getFullYear();
+      case 'DECADE':
+        return "" + (date.getFullYear()) + "'S";
+      case 'EARLY':
+        return "Early " + (date.getFullYear()) + "'S";
+      case 'LATE':
+        return "Late " + (date.getFullYear()) + "'S";
+      case 'MONTH':
+        return "" + months[date.getMonth()] + " " + (date.getFullYear());
+      default:
+        return "" + (date.getDate()) + " " + months[date.getMonth()] + " " + (date.getFullYear());
+    }
+  };
+
+  format = function(rows) {
+    var row, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = rows.length; _i < _len; _i++) {
+      row = rows[_i];
+      _results.push("<tr><td>" + (show(row.date, row.span)) + "<td>" + row.label);
+    }
+    return _results;
+  };
+
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = {
+      parse: parse,
+      apply: apply,
+      format: format
+    };
+  }
+
+  emit = function(div, item) {
+    var results, rows;
+    rows = parse(item.text);
+    wiki.log('calendar rows', rows);
+    results = apply({}, {}, new Date(), rows);
+    wiki.log('calendar results', results);
+    return div.append("<table style=\"width:100%; background:#eee; padding:.8em; margin-bottom:5px;\">" + (format(results).join('')) + "</table>");
+  };
+
+  bind = function(div, item) {
+    return div.dblclick(function() {
+      return wiki.textEditor(div, item);
+    });
+  };
+
+  if (typeof window !== "undefined" && window !== null) {
+    window.plugins.calendar = {
+      emit: emit,
+      bind: bind
+    };
+  }
 
 }).call(this);
 
@@ -2842,27 +3171,203 @@ require.define("/plugins/report/report.js",function(require,module,exports,__dir
 
 });
 
+require.define("/plugins/txtzyme/package.json",function(require,module,exports,__dirname,__filename,process,global){module.exports = {"main":"txtzyme.js"}
+});
+
+require.define("/plugins/txtzyme/txtzyme.js",function(require,module,exports,__dirname,__filename,process,global){// Generated by CoffeeScript 1.4.0
+(function() {
+  var apply, bind, emit, parse, report;
+
+  parse = function(text) {
+    var defn, line, prev, word, words, _i, _j, _len, _len1, _ref, _ref1;
+    defn = {};
+    _ref = text.split(/\n+/);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      line = _ref[_i];
+      words = line.split(/\s+/);
+      if (words[0]) {
+        defn[words[0]] = prev = words.slice(1, 1000);
+      } else {
+        _ref1 = words.slice(1, 1000);
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          word = _ref1[_j];
+          prev.push(word);
+        }
+      }
+    }
+    return defn;
+  };
+
+  apply = function(defn, call, arg, emit) {
+    var words, _ref;
+    if (!(words = (_ref = defn[call]) != null ? _ref.slice(0) : void 0)) {
+      return;
+    }
+    return (function(stack, result) {
+      var next, send;
+      send = function() {
+        var text;
+        if (!result.length) {
+          return;
+        }
+        text = "" + (result.join(' ')) + "\n";
+        result = [];
+        return emit(text, stack, next);
+      };
+      next = function() {
+        var word, _ref1, _ref2;
+        if (!stack.length) {
+          return;
+        }
+        word = (_ref1 = stack[stack.length - 1]) != null ? _ref1.words.shift() : void 0;
+        if (word === void 0) {
+          stack.pop();
+        } else if (word === 'NL') {
+          return send();
+        } else if (word.match(/^[A-Z][A-Z0-9]*$/)) {
+          if (stack.length < 10 && (words = (_ref2 = defn[word]) != null ? _ref2.slice(0) : void 0)) {
+            stack.push({
+              call: word,
+              words: words
+            });
+          }
+        } else {
+          result.push(word);
+        }
+        if (stack.length) {
+          return next();
+        } else {
+          return send();
+        }
+      };
+      if (words.length) {
+        return next();
+      }
+    })([
+      {
+        call: call,
+        words: words
+      }
+    ], []);
+  };
+
+  report = function(defn) {
+    var key, word, words, _i, _len;
+    report = [];
+    for (key in defn) {
+      words = defn[key];
+      report.push("<li class=\"" + key + "\"><span>" + key + "</span>");
+      for (_i = 0, _len = words.length; _i < _len; _i++) {
+        word = words[_i];
+        report.push("<span>" + word + "</span>");
+      }
+    }
+    return report.join(' ');
+  };
+
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = {
+      parse: parse,
+      apply: apply
+    };
+  }
+
+  emit = function($item, item) {
+    return $item.append("<div style=\"width:93%; background:#eee; padding:.8em; margin-bottom:5px;\">\n  <p class=\"report\" style=\"white-space: pre; white-space: pre-wrap;\">" + item.text + "</p>\n  <p class=\"caption\">status here</p>\n</div>");
+  };
+
+  bind = function($item, item) {
+    var $page, defn, host, progress, rcvd, sent, socket, tic, timer, trigger;
+    defn = parse(item.text);
+    wiki.log(defn);
+    $page = $item.parents('.page:first');
+    host = $page.data('site') || location.host;
+    socket = new WebSocket("ws://" + host + "/plugin/txtzyme");
+    sent = rcvd = 0;
+    tic = function() {
+      var now;
+      now = new Date();
+      trigger('SECOND');
+      if (now.getSeconds()) {
+        return;
+      }
+      trigger('MINUTE');
+      if (now.getMinutes()) {
+        return;
+      }
+      trigger('HOUR');
+      if (now.getHours()) {
+        return;
+      }
+      return trigger('DAY');
+    };
+    timer = setInterval(tic, 1000);
+    $item.dblclick(function() {
+      clearInterval(timer);
+      if (socket != null) {
+        socket.close();
+      }
+      return wiki.textEditor($item, item);
+    });
+    $(".main").on('thumb', function(evt, thumb) {
+      return trigger('THUMB');
+    });
+    trigger = function(word, arg) {
+      if (arg == null) {
+        arg = 0;
+      }
+      return apply(defn, word, arg, function(message, stack, done) {
+        var call, todo, words;
+        todo = ((function() {
+          var _i, _len, _ref, _results;
+          _results = [];
+          for (_i = 0, _len = stack.length; _i < _len; _i++) {
+            _ref = stack[_i], call = _ref.call, words = _ref.words;
+            _results.push("" + call + " " + (words.join(' ')));
+          }
+          return _results;
+        })()).join('<br>');
+        $item.find('p.report').html("" + todo + "<br>" + message);
+        if (socket) {
+          socket.send(message);
+          progress("" + (++sent) + " sent");
+        }
+        return setTimeout(done, 200);
+      });
+    };
+    progress = function(m) {
+      wiki.log('txtzyme', m);
+      return $item.find('p.caption').text(m);
+    };
+    socket.onopen = function() {
+      progress("opened");
+      return trigger('OPEN');
+    };
+    socket.onmessage = function(e) {
+      return progress("rcvd " + e.data);
+    };
+    return socket.onclose = function() {
+      progress("closed");
+      return socket = null;
+    };
+  };
+
+  if (typeof window !== "undefined" && window !== null) {
+    window.plugins.txtzyme = {
+      emit: emit,
+      bind: bind
+    };
+  }
+
+}).call(this);
+
+});
+
 require.define("/testclient.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
-  var util,
-    __slice = [].slice;
 
   mocha.setup('bdd');
 
-  window.wiki = {};
-
-  wiki.log = function() {
-    var things;
-    things = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-    if ((typeof console !== "undefined" && console !== null ? console.log : void 0) != null) {
-      return console.log(things);
-    }
-  };
-
-  util = require('./lib/util.coffee');
-
-  wiki.resolveLinks = util.resolveLinks;
-
-  wiki.resolutionContext = ['view'];
+  window.wiki = require('./lib/wiki');
 
   require('./test/util.coffee');
 
@@ -2889,6 +3394,186 @@ require.define("/testclient.coffee",function(require,module,exports,__dirname,__
 
 });
 require("/testclient.coffee");
+
+require.define("/plugins/calendar/test.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
+  var report;
+
+  report = require('./calendar');
+
+  describe('calendar plugin', function() {
+    describe('parsing', function() {
+      it('recognizes decades', function() {
+        expect(report.parse("1960 DECADE")).to.eql([
+          {
+            year: 1960,
+            span: 'DECADE'
+          }
+        ]);
+        expect(report.parse("DECADE 1960")).to.eql([
+          {
+            year: 1960,
+            span: 'DECADE'
+          }
+        ]);
+        return expect(report.parse("60S")).to.eql([
+          {
+            year: 1960,
+            span: 'DECADE'
+          }
+        ]);
+      });
+      it('recognizes half decades', function() {
+        expect(report.parse("60S EARLY")).to.eql([
+          {
+            year: 1960,
+            span: 'EARLY'
+          }
+        ]);
+        expect(report.parse("EARLY 60S")).to.eql([
+          {
+            year: 1960,
+            span: 'EARLY'
+          }
+        ]);
+        return expect(report.parse("LATE 60S")).to.eql([
+          {
+            year: 1960,
+            span: 'LATE'
+          }
+        ]);
+      });
+      it('recognizes years', function() {
+        return expect(report.parse("1960")).to.eql([
+          {
+            year: 1960,
+            span: 'YEAR'
+          }
+        ]);
+      });
+      it('recognizes months', function() {
+        expect(report.parse("1960 MAR")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            span: 'MONTH'
+          }
+        ]);
+        expect(report.parse("MAR 1960")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            span: 'MONTH'
+          }
+        ]);
+        return expect(report.parse("MARCH 1960")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            span: 'MONTH'
+          }
+        ]);
+      });
+      it('recognizes days', function() {
+        expect(report.parse("MAR 5 1960")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            day: 5,
+            span: 'DAY'
+          }
+        ]);
+        expect(report.parse("1960 MAR 5")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            day: 5,
+            span: 'DAY'
+          }
+        ]);
+        return expect(report.parse("5 MAR 1960")).to.eql([
+          {
+            year: 1960,
+            month: 3,
+            day: 5,
+            span: 'DAY'
+          }
+        ]);
+      });
+      return it('recognizes labels', function() {
+        expect(report.parse("Ward's CHM Interview")).to.eql([
+          {
+            label: "Ward's CHM Interview"
+          }
+        ]);
+        expect(report.parse("APRIL 24 2006 Ward's CHM Interview")).to.eql([
+          {
+            year: 2006,
+            month: 4,
+            day: 24,
+            span: 'DAY',
+            label: "Ward's CHM Interview"
+          }
+        ]);
+        return expect(report.parse(" APRIL  24  2006\tWard's  CHM  Interview  ")).to.eql([
+          {
+            year: 2006,
+            month: 4,
+            day: 24,
+            span: 'DAY',
+            label: "Ward's CHM Interview"
+          }
+        ]);
+      });
+    });
+    return describe('applying', function() {
+      var interview, today;
+      today = new Date(2013, 2 - 1, 3);
+      interview = new Date(2006, 4 - 1, 24);
+      it('recalls input', function() {
+        var input, output, rows;
+        input = {
+          interview: {
+            date: interview
+          }
+        };
+        output = {};
+        rows = report.parse("interview");
+        return expect(report.apply(input, output, today, rows)).to.eql([
+          {
+            date: interview,
+            label: 'interview'
+          }
+        ]);
+      });
+      return it('extends today', function() {
+        var input, output, results, rows;
+        input = {};
+        output = {};
+        rows = report.parse("APRIL 1 April Fools Day");
+        results = report.apply(input, output, today, rows);
+        expect(results).to.eql([
+          {
+            date: new Date(2013, 4 - 1),
+            month: 4,
+            day: 1,
+            span: 'DAY',
+            label: 'April Fools Day'
+          }
+        ]);
+        return expect(output).to.eql({
+          'April Fools Day': {
+            date: new Date(2013, 4 - 1),
+            span: 'DAY'
+          }
+        });
+      });
+    });
+  });
+
+}).call(this);
+
+});
+require("/plugins/calendar/test.coffee");
 
 require.define("/plugins/changes/test.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
   var createFakeLocalStorage, pluginCtor;
@@ -3197,4 +3882,83 @@ require.define("/plugins/report/test.coffee",function(require,module,exports,__d
 
 });
 require("/plugins/report/test.coffee");
+
+require.define("/plugins/txtzyme/test.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
+  var txtzyme;
+
+  txtzyme = require('./txtzyme');
+
+  console.log(txtzyme);
+
+  describe('txtzyme plugin', function() {
+    describe('parsing', function() {
+      it('recognizes definitions', function() {
+        return expect(txtzyme.parse("SECOND 1o500m0o")).to.eql({
+          SECOND: ['1o500m0o']
+        });
+      });
+      it('handles empty definitions', function() {
+        return expect(txtzyme.parse("SECOND")).to.eql({
+          SECOND: []
+        });
+      });
+      it('recognizes multiple definitions', function() {
+        return expect(txtzyme.parse("SECOND BLINK BLINK\nBLINK 1o500m0o500m")).to.eql({
+          SECOND: ['BLINK', 'BLINK'],
+          BLINK: ['1o500m0o500m']
+        });
+      });
+      it('ignores blank line separator', function() {
+        return expect(txtzyme.parse("SECOND BLINK BLINK\n\nBLINK 1o500m0o500m")).to.eql({
+          SECOND: ['BLINK', 'BLINK'],
+          BLINK: ['1o500m0o500m']
+        });
+      });
+      return it('treates indented lines as continuations', function() {
+        return expect(txtzyme.parse("SECOND BLINK\n BLINK\n\nBLINK\n 1o500m0o500m")).to.eql({
+          SECOND: ['BLINK', 'BLINK'],
+          BLINK: ['1o500m0o500m']
+        });
+      });
+    });
+    return describe('applying', function() {
+      var apply;
+      apply = function(text, arg) {
+        var defn, result;
+        result = "";
+        defn = txtzyme.parse(text);
+        txtzyme.apply(defn, 'TEST', arg, function(message, stack, done) {
+          result += message;
+          return done();
+        });
+        return result;
+      };
+      it('recognizes definitions', function() {
+        return expect(apply("TEST 1o")).to.eql("1o\n");
+      });
+      it('calls definitions', function() {
+        return expect(apply("TEST FOO\nFOO 0o")).to.eql("0o\n");
+      });
+      it('merges results', function() {
+        return expect(apply("TEST 1o FOO 0o\nFOO 10m")).to.eql("1o 10m 0o\n");
+      });
+      it('limits call depth', function() {
+        return expect(apply("TEST o TEST")).to.eql("o o o o o o o o o o\n");
+      });
+      it('handles empty definitions', function() {
+        return expect(apply("TEST")).to.eql("");
+      });
+      it('handles missing definitions', function() {
+        return expect(apply("TEST FOO")).to.eql("");
+      });
+      return it('recognizes NL as newline', function() {
+        return expect(apply("TEST 100m NL 200m")).to.eql("100m\n200m\n");
+      });
+    });
+  });
+
+}).call(this);
+
+});
+require("/plugins/txtzyme/test.coffee");
 })();
