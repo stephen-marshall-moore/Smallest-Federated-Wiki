@@ -16,19 +16,19 @@ import (
   "text/template"
   "github.com/gorilla/mux"
   "github.com/gorilla/sessions"
-  "github.com/yohcop/openid.go/src/openid"
+  "github.com/stephen-marshall-moore/openid.go/src/openid"
 )
 
-var appRoot = "/home/fedwiki/smallest/src"
+var appRoot = "/home/fedwiki/smallest"
 var dataRoot = "/home/fedwiki/smallest/data"
-var rootDefault = appRoot + "/server/default-data"
+var rootDefault = appRoot + "/default-data"
 
 var baseStore = FileStore {
-  Directory: dataRoot + "/farm/wiki.nimbostrati.com",
+  Directory: dataRoot + "/farm/wiki.example.com",
   DefaultDirectory: rootDefault }
 
 var base = Site {
-  Domain: "wiki.nimbostrati.com",
+  Domain: "wiki.example.com",
   Data: baseStore,
   ClientDirectory: appRoot + "/client" }
 
@@ -246,7 +246,7 @@ func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
     data[i] = datum
   } 
     
-  tmpl, err := template.ParseFiles(appRoot + "/server/templates/layout.html")
+  tmpl, err := template.ParseFiles(appRoot + "/server/go/templates/layout.html")
   
   if err != nil { panic(err) }
   /***

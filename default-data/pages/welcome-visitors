@@ -2,7 +2,7 @@
   "title": "Welcome Visitors",
   "story": [
     {
-      "text": "Welcome to the [[Smallest Federated Wiki]]. You may be seeing this page because you have just entered a wiki of your own. If so, you have three things to do before you go on. now will it save locally?",
+      "text": "Welcome to the [[Smallest Federated Wiki]]. You may be seeing this page because you have just entered a wiki of your own. If so, you have three things to do before you go on.",
       "id": "7b56f22a4b9ee974",
       "type": "paragraph"
     },
@@ -10,11 +10,6 @@
       "type": "paragraph",
       "id": "821827c99b90cfd1",
       "text": "<b>One:</b> Create a page about yourself. Start by making a link to that page right here. Double-click the gray box below. That opens an editor. Type your name enclosed in double square brackets. Then press Command/CTRL-S to save."
-    },
-    {
-      "type": "paragraph",
-      "id": "1c6b9337ac3ea1e0",
-      "text": "I prefer Alt-S to ctrl-s (which seems to bring up file save dialog all the time). [[Stephen Moore]]"
     },
     {
       "type": "factory",
@@ -135,39 +130,8 @@
     },
     {
       "type": "fork",
-      "site": "wiki.nimbostrati.com:8080",
+      "site": "new.fed.wiki.org",
       "date": 1344306178918
-    },
-    {
-      "type": "edit",
-      "id": "7b56f22a4b9ee974",
-      "item": {
-        "text": "Welcome to the [[Smallest Federated Wiki]]. You may be seeing this page because you have just entered a wiki of your own. If so, you have three things to do before you go on. now will it save locally?",
-        "id": "7b56f22a4b9ee974",
-        "type": "paragraph"
-      },
-      "date": 1359566361295
-    },
-    {
-      "item": {
-        "type": "paragraph",
-        "id": "1c6b9337ac3ea1e0",
-        "text": ""
-      },
-      "id": "1c6b9337ac3ea1e0",
-      "type": "add",
-      "after": "821827c99b90cfd1",
-      "date": 1359566386755
-    },
-    {
-      "type": "edit",
-      "id": "1c6b9337ac3ea1e0",
-      "item": {
-        "type": "paragraph",
-        "id": "1c6b9337ac3ea1e0",
-        "text": "I prefer Alt-S to ctrl-s (which seems to bring up file save dialog all the time). [[Stephen Moore]]"
-      },
-      "date": 1359566447036
     }
   ]
 }
