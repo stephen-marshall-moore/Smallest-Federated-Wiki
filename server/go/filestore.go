@@ -28,10 +28,10 @@ func (fs FileStore) Exists( name string ) bool {
 
 func (fs FileStore) Get( name string ) * Content {
   file, err := os.Open(path.Join( fs.Directory, "pages",  name))
-  defer file.Close()
+  //defer file.Close()
 
   if err != nil {
-    file, err = os.Open(path.Join( fs.DefaultDirectory,  name))
+    file, err = os.Open(path.Join( fs.DefaultDirectory, "pages",  name))
     if err == nil { 
       enc := json.NewDecoder(file)
       c := new(Content)
@@ -48,6 +48,7 @@ func (fs FileStore) Get( name string ) * Content {
   enc := json.NewDecoder(file)
   c := new(Content)
   enc.Decode(c)
+  //file.Close()
   return c
 }
 
@@ -59,7 +60,7 @@ func (fs FileStore) Put( name string, content * Content ) {
   }
 
   file, err := os.Create(fn)
-  defer file.Close()
+  //defer file.Close()
 
   if err != nil {
       log.Println( "FileStore Put [create] problem on (" + fs.Directory + ", " + name + "): ", err )

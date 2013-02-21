@@ -3,6 +3,7 @@ package main
 import (
   //"fmt"
   "encoding/json"
+  //"io"
   //"io/ioutil"
   "log"
   "net/http"
@@ -19,8 +20,10 @@ import (
   "github.com/stephen-marshall-moore/openid.go/src/openid"
 )
 
-var appRoot = "/home/fedwiki/smallest"
-var dataRoot = "/home/fedwiki/smallest/data"
+//var appRoot = "/home/fedwiki/smallest"
+//var dataRoot = "/home/fedwiki/smallest/data"
+var appRoot = "/home/stephen/hacking/Smallest-Federated-Wiki"
+var dataRoot = "/home/stephen/hacking/Smallest-Federated-Wiki/data"
 var rootDefault = appRoot + "/default-data"
 
 var baseStore = FileStore {
@@ -134,13 +137,19 @@ func JsonHandler ( w http.ResponseWriter, r *http.Request ) {
   if site != nil {
     w.Header().Set( "Content-Type", "application/json; charset=utf-8" )
     vars := mux.Vars(r)
-    fname = path.Join( site.Data.Location(), "pages", vars["slug"] )
+    fname = vars["slug"] //path.Join( site.Data.Location(), "pages", vars["slug"] )
     log.Println( "JsonHandler: " + fname )
   } else {
-    fname = path.Join( rootDefault, "oops.html" )
+    fname = "missing-page" //path.Join( rootDefault, "oops.html" )
   }
 
-  http.ServeFile(w,r,fname)
+  //http.ServeFile(w,r,fname)
+  content := site.Data.Get( fname )
+  //io.WriteString( w, content )
+
+  enc := json.NewEncoder(w)
+  enc.Encode(content)
+
 }
 
 func LoginHandler ( w http.ResponseWriter, r *http.Request ) {
