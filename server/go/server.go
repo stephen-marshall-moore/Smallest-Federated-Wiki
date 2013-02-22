@@ -32,6 +32,7 @@ var baseStore = FileStore {
 
 var base = Site {
   Domain: "wiki.example.com",
+  Home: "welcome-visitors",
   Data: baseStore,
   ClientDirectory: appRoot + "/client" }
 
@@ -146,9 +147,12 @@ func JsonHandler ( w http.ResponseWriter, r *http.Request ) {
   //http.ServeFile(w,r,fname)
   content := site.Data.Get( fname )
   //io.WriteString( w, content )
-
-  enc := json.NewEncoder(w)
-  enc.Encode(content)
+  if content != nil {
+    enc := json.NewEncoder(w)
+    enc.Encode(content)
+  } else {
+    http.NotFound(w,r)
+  }
 
 }
 
@@ -232,6 +236,39 @@ func IsAuthenticated ( r * http.Request ) bool {
   session, _ := cookieStore.Get( r, "wiki-woko" )
 
   return session.Values["authenticated"] == 42
+}
+
+func WelcomeHandler ( w http.ResponseWriter, r *http.Request ) {
+  site := RequestedSite( r )
+
+  if site == nil {
+    log.Println( "Action Handler: unexpectedly site is nil!" )
+    http.Error(w, http.StatusText(403), 403)
+  }
+
+  log.Println( "Welcome!" )
+
+  data := make([]*ViewInfo, 1)
+
+  datum := new(ViewInfo)
+
+  datum.Status = "active"
+  datum.Slug = site.Home
+ 
+  data[0] = datum
+    
+  tmpl, err := template.ParseFiles(appRoot + "/server/go/templates/layout.html")
+  
+  if err != nil { panic(err) }
+
+  stuff := struct {
+    Login bool
+    Title string
+    Slugs [] * ViewInfo
+  } { IsAuthenticated(r), "my title", data }
+
+  err = tmpl.Execute(w, stuff)
+  if err != nil { panic(err) }
 }
 
 func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
@@ -484,6 +521,7 @@ func MatchMultiples(req *http.Request, m *mux.RouteMatch) bool {
 func main() {
     r := mux.NewRouter()
 
+    r.HandleFunc("/{slug:(home|index|)}", WelcomeHandler)
     r.HandleFunc("/login", DiscoverHandler)
     r.HandleFunc("/logout", LogoutHandler)
     r.HandleFunc("/openidcallback", OpenIdCallbackHandler)

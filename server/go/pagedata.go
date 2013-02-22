@@ -5,6 +5,7 @@ import (
 
 type Site struct {
   Domain string
+  Home string
   Data Store
   ClientDirectory string
 }
