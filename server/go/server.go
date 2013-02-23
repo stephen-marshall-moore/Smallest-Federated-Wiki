@@ -4,7 +4,7 @@ import (
   //"fmt"
   "encoding/json"
   //"io"
-  //"io/ioutil"
+  "io/ioutil"
   "log"
   "net/http"
   //"net/url"
@@ -20,10 +20,10 @@ import (
   "github.com/stephen-marshall-moore/openid.go/src/openid"
 )
 
-//var appRoot = "/home/fedwiki/smallest"
-//var dataRoot = "/home/fedwiki/smallest/data"
-var appRoot = "/home/stephen/hacking/Smallest-Federated-Wiki"
-var dataRoot = "/home/stephen/hacking/Smallest-Federated-Wiki/data"
+var appRoot = "/home/fedwiki/smallest"
+var dataRoot = "/home/fedwiki/smallest/data"
+//var appRoot = "/home/stephen/hacking/Smallest-Federated-Wiki"
+//var dataRoot = "/home/stephen/hacking/Smallest-Federated-Wiki/data"
 var rootDefault = appRoot + "/default-data"
 
 var baseStore = FileStore {
@@ -176,9 +176,11 @@ func LogoutHandler ( w http.ResponseWriter, r *http.Request ) {
 func DiscoverHandler(w http.ResponseWriter, r *http.Request) {
   site := RequestedSite( r )
 
+  loginUrl := r.FormValue( "LoginButton" )
+
   if site != nil {
 
-    if url, err := openid.RedirectUrl("https://www.google.com/accounts/o8/id",
+    if url, err := openid.RedirectUrl(loginUrl,
       "http://" + r.Host + "/openidcallback",
       ""); err == nil {
       http.Redirect(w, r, url, 303)
@@ -206,11 +208,24 @@ func OpenIdCallbackHandler(w http.ResponseWriter, r *http.Request) {
   if err == nil {
 
     session, _ := cookieStore.Get( r, "wiki-woko" )
-    session.Values["authenticated"] = 42
-    session.Values["id"] = id
-    session.Save(r,w)
 
-    http.Redirect(w, r, "/view/welcome-visitors", 302)
+    siteOwner := site.Owner()
+    if siteOwner == nil {
+      site.SetOwner(&id)
+      session.Values["authenticated"] = 42
+      session.Values["id"] = id
+      session.Save(r,w)
+      http.Redirect(w, r, "/view/welcome-visitors", 302)
+    } else {
+      if *siteOwner == id {
+        session.Values["authenticated"] = 42
+        session.Values["id"] = id
+        session.Save(r,w)
+        http.Redirect(w, r, "/view/welcome-visitors", 302)
+      }
+    }
+
+    http.Redirect(w, r, "/view/welcome-visitors", 403)
 
     /*
     stuff := struct {
@@ -238,11 +253,40 @@ func IsAuthenticated ( r * http.Request ) bool {
   return session.Values["authenticated"] == 42
 }
 
+func (s Site) Owner() * string {
+  file, err := os.Open(path.Join( s.Data.Location(), "status",  "openid.identity"))
+  //defer file.Close()
+
+  if err != nil {
+      log.Println( "Unowned site: " + s.Domain )
+      return nil
+  }
+  
+  content, err2 := ioutil.ReadAll(file)
+  if err2 != nil {
+    log.Println( "Unowned site: " + s.Domain, err2 )
+    return nil
+  }
+
+  str := string(content)
+
+  return &str
+}
+
+func (s Site) SetOwner(openid * string) {
+  err := ioutil.WriteFile(path.Join( s.Data.Location(), "status",  "openid.identity"), [] byte(*openid), 0666)
+  //defer file.Close()
+
+  if err != nil {
+      log.Println( "Unable to set owner owned site: " + s.Domain + ", " + *openid, err )
+  }
+}
+
 func WelcomeHandler ( w http.ResponseWriter, r *http.Request ) {
   site := RequestedSite( r )
 
   if site == nil {
-    log.Println( "Action Handler: unexpectedly site is nil!" )
+    log.Println( "Welcome Handler: unexpectedly site is nil!" )
     http.Error(w, http.StatusText(403), 403)
   }
 
@@ -269,6 +313,24 @@ func WelcomeHandler ( w http.ResponseWriter, r *http.Request ) {
 
   err = tmpl.Execute(w, stuff)
   if err != nil { panic(err) }
+}
+
+func FaviconHandler ( w http.ResponseWriter, r *http.Request ) {
+  site := RequestedSite( r )
+
+  if site == nil {
+    log.Println( "Favicon Handler: unexpectedly site is nil!" )
+    http.Error(w, http.StatusText(403), 403)
+  }
+  
+  iconPath := path.Join( site.Data.Location(), "status", "favicon.png" )
+
+  _, err := os.Stat(iconPath)
+
+  if err == nil {
+    http.ServeFile(w,r,iconPath)
+  }
+  http.NotFound(w,r)
 }
 
 func MultiViewHandler ( w http.ResponseWriter, r *http.Request ) {
@@ -522,6 +584,7 @@ func main() {
     r := mux.NewRouter()
 
     r.HandleFunc("/{slug:(home|index|)}", WelcomeHandler)
+    r.HandleFunc("/favicon.png", FaviconHandler)
     r.HandleFunc("/login", DiscoverHandler)
     r.HandleFunc("/logout", LogoutHandler)
     r.HandleFunc("/openidcallback", OpenIdCallbackHandler)
